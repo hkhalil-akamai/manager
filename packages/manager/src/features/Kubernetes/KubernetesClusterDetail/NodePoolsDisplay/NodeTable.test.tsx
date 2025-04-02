@@ -1,8 +1,8 @@
+import { linodeFactory } from '@linode/utilities';
 import { DateTime } from 'luxon';
 import * as React from 'react';
 
 import { kubeLinodeFactory } from 'src/factories/kubernetesCluster';
-import { linodeFactory } from 'src/factories/linodes';
 import { makeResourcePage } from 'src/mocks/serverHandlers';
 import { HttpResponse, http, server } from 'src/mocks/testServer';
 import { renderWithTheme } from 'src/utilities/testHelpers';
@@ -34,6 +34,7 @@ const props: Props = {
   nodes: mockKubeNodes,
   openRecycleNodeDialog: vi.fn(),
   poolId: 1,
+  regionSupportsDiskEncryption: false,
   statusFilter: 'all',
   tags: [],
   typeLabel: 'Linode 2G',
@@ -103,7 +104,7 @@ describe('NodeTable', () => {
 
     expect(
       await findByText(
-        'Nodes will appear once cluster provisioning is complete.'
+        'Worker nodes will appear once cluster provisioning is complete.'
       )
     ).toBeVisible();
 

@@ -1,37 +1,38 @@
 /**
  * @file Integration Tests for CloudPulse Linode Dashboard.
  */
-import { mockAppendFeatureFlags } from 'support/intercepts/feature-flags';
+import { linodeFactory, regionFactory } from '@linode/utilities';
+import { widgetDetails } from 'support/constants/widgets';
+import { mockGetAccount } from 'support/intercepts/account';
 import {
   mockCreateCloudPulseJWEToken,
-  mockGetCloudPulseDashboard,
   mockCreateCloudPulseMetrics,
+  mockGetCloudPulseDashboard,
   mockGetCloudPulseDashboards,
   mockGetCloudPulseMetricDefinitions,
   mockGetCloudPulseServices,
 } from 'support/intercepts/cloudpulse';
+import { mockAppendFeatureFlags } from 'support/intercepts/feature-flags';
+import { mockGetLinodes } from 'support/intercepts/linodes';
+import { mockGetUserPreferences } from 'support/intercepts/profile';
+import { mockGetRegions } from 'support/intercepts/regions';
 import { ui } from 'support/ui';
-import { widgetDetails } from 'support/constants/widgets';
+import { generateRandomMetricsData } from 'support/util/cloudpulse';
+
 import {
   accountFactory,
   cloudPulseMetricsResponseFactory,
   dashboardFactory,
   dashboardMetricFactory,
   kubeLinodeFactory,
-  linodeFactory,
-  regionFactory,
   widgetFactory,
 } from 'src/factories';
-import { mockGetAccount } from 'support/intercepts/account';
-import { mockGetLinodes } from 'support/intercepts/linodes';
-import { mockGetUserPreferences } from 'support/intercepts/profile';
-import { mockGetRegions } from 'support/intercepts/regions';
-import { CloudPulseMetricsResponse } from '@linode/api-v4';
-import { generateRandomMetricsData } from 'support/util/cloudpulse';
-import { Interception } from 'cypress/types/net-stubbing';
 import { generateGraphData } from 'src/features/CloudPulse/Utils/CloudPulseWidgetUtils';
-import { Flags } from 'src/featureFlags';
 import { formatToolTip } from 'src/features/CloudPulse/Utils/unitConversion';
+
+import type { CloudPulseMetricsResponse } from '@linode/api-v4';
+import type { Flags } from 'src/featureFlags';
+import type { Interception } from 'support/cypress-exports';
 
 /**
  * This test ensures that widget titles are displayed correctly on the dashboard.
@@ -46,7 +47,7 @@ import { formatToolTip } from 'src/features/CloudPulse/Utils/unitConversion';
 const expectedGranularityArray = ['Auto', '1 day', '1 hr', '5 min'];
 const timeDurationToSelect = 'Last 24 Hours';
 const flags: Partial<Flags> = {
-  aclp: { enabled: true, beta: true },
+  aclp: { beta: true, enabled: true },
   aclpResourceTypeMap: [
     {
       dimensionKey: 'LINODE_ID',
@@ -63,28 +64,28 @@ const flags: Partial<Flags> = {
   ],
 };
 const {
-  metrics,
-  id,
-  serviceType,
   dashboardName,
+  id,
+  metrics,
   region,
   resource,
+  serviceType,
 } = widgetDetails.linode;
 
 const dashboard = dashboardFactory.build({
   label: dashboardName,
   service_type: serviceType,
-  widgets: metrics.map(({ title, yLabel, name, unit }) => {
+  widgets: metrics.map(({ name, title, unit, yLabel }) => {
     return widgetFactory.build({
       label: title,
-      y_label: yLabel,
       metric: name,
       unit,
+      y_label: yLabel,
     });
   }),
 });
 
-const metricDefinitions = metrics.map(({ title, name, unit }) =>
+const metricDefinitions = metrics.map(({ name, title, unit }) =>
   dashboardMetricFactory.build({
     label: title,
     metric: name,
@@ -93,8 +94,8 @@ const metricDefinitions = metrics.map(({ title, name, unit }) =>
 );
 
 const mockLinode = linodeFactory.build({
-  label: resource,
   id: kubeLinodeFactory.build().instance_id ?? undefined,
+  label: resource,
 });
 
 const mockAccount = accountFactory.build();
@@ -136,7 +137,7 @@ const getWidgetLegendRowValuesFromResponse = (
   // Generate graph data using the provided parameters
   const graphData = generateGraphData({
     flags,
-    label: label,
+    label,
     metricsList: responsePayload,
     resources: [
       {
@@ -145,9 +146,9 @@ const getWidgetLegendRowValuesFromResponse = (
         region: 'us-ord',
       },
     ],
-    serviceType: serviceType,
+    serviceType,
     status: 'success',
-    unit: unit,
+    unit,
   });
 
   // Destructure metrics data from the first legend row
@@ -168,7 +169,7 @@ describe('Integration Tests for Linode Dashboard ', () => {
     mockGetLinodes([mockLinode]);
     mockGetCloudPulseMetricDefinitions(serviceType, metricDefinitions);
     mockGetCloudPulseDashboards(serviceType, [dashboard]).as('fetchDashboard');
-    mockGetCloudPulseServices(serviceType).as('fetchServices');
+    mockGetCloudPulseServices([serviceType]).as('fetchServices');
     mockGetCloudPulseDashboard(id, dashboard);
     mockCreateCloudPulseJWEToken(serviceType);
     mockCreateCloudPulseMetrics(serviceType, metricsAPIResponsePayload).as(
@@ -177,8 +178,8 @@ describe('Integration Tests for Linode Dashboard ', () => {
     mockGetRegions([mockRegion]);
     mockGetUserPreferences({});
 
-    // navigate to the cloudpulse page
-    cy.visitWithLogin('monitor');
+    // navigate to the metrics page
+    cy.visitWithLogin('/metrics');
 
     // Wait for the services and dashboard API calls to complete before proceeding
     cy.wait(['@fetchServices', '@fetchDashboard']);
@@ -221,14 +222,16 @@ describe('Integration Tests for Linode Dashboard ', () => {
     });
 
     // Select a region from the dropdown.
-    ui.regionSelect.find().click().clear().type(`${region}{enter}`);
+    ui.regionSelect.find().click();
+    ui.regionSelect.find().clear();
+    ui.regionSelect.find().type(`${region}{enter}`);
 
     // Select a resource from the autocomplete input.
     ui.autocomplete
       .findByLabel('Resources')
       .should('be.visible')
-      .type(`${resource}{enter}`)
-      .click();
+      .type(`${resource}{enter}`);
+    ui.autocomplete.findByLabel('Resources').click();
 
     cy.findByText(resource).should('be.visible');
 
@@ -262,13 +265,13 @@ describe('Integration Tests for Linode Dashboard ', () => {
             metricsAPIResponsePayload
           ).as('getGranularityMetrics');
 
-          //find the interval component and select the expected granularity
+          // find the interval component and select the expected granularity
           ui.autocomplete
             .findByLabel('Select an Interval')
             .should('be.visible')
-            .type(`${testData.expectedGranularity}{enter}`); //type expected granularity
+            .type(`${testData.expectedGranularity}{enter}`); // type expected granularity
 
-          //check if the API call is made correctly with time granularity value selected
+          // check if the API call is made correctly with time granularity value selected
           cy.wait('@getGranularityMetrics').then((interception) => {
             expect(interception)
               .to.have.property('response')
@@ -278,7 +281,7 @@ describe('Integration Tests for Linode Dashboard ', () => {
             );
           });
 
-          //validate the widget areachart is present
+          // validate the widget areachart is present
           cy.get('.recharts-responsive-container').within(() => {
             const expectedWidgetValues = getWidgetLegendRowValuesFromResponse(
               metricsAPIResponsePayload,
@@ -319,13 +322,13 @@ describe('Integration Tests for Linode Dashboard ', () => {
             metricsAPIResponsePayload
           ).as('getAggregationMetrics');
 
-          //find the interval component and select the expected granularity
+          // find the interval component and select the expected granularity
           ui.autocomplete
             .findByLabel('Select an Aggregate Function')
             .should('be.visible')
-            .type(`${testData.expectedAggregation}{enter}`); //type expected granularity
+            .type(`${testData.expectedAggregation}{enter}`); // type expected granularity
 
-          //check if the API call is made correctly with time granularity value selected
+          // check if the API call is made correctly with time granularity value selected
           cy.wait('@getAggregationMetrics').then((interception) => {
             expect(interception)
               .to.have.property('response')
@@ -335,7 +338,7 @@ describe('Integration Tests for Linode Dashboard ', () => {
             );
           });
 
-          //validate the widget areachart is present
+          // validate the widget areachart is present
           cy.get('.recharts-responsive-container').within(() => {
             const expectedWidgetValues = getWidgetLegendRowValuesFromResponse(
               metricsAPIResponsePayload,

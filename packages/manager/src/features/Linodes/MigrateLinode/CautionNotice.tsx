@@ -1,11 +1,11 @@
+import { useLinodeVolumesQuery } from '@linode/queries';
 import { Checkbox, Notice, Typography } from '@linode/ui';
+import { API_MAX_PAGE_SIZE } from '@linode/utilities';
 import { styled, useTheme } from '@mui/material/styles';
 import { DateTime } from 'luxon';
 import * as React from 'react';
 
 import { Link } from 'src/components/Link';
-import { API_MAX_PAGE_SIZE } from 'src/constants';
-import { useLinodeVolumesQuery } from 'src/queries/volumes/volumes';
 
 interface Props {
   distributedRegionWarning?: string;
@@ -125,7 +125,7 @@ const StyledRootDiv = styled('div', { label: 'StyledRootDiv' })(
         fontSize: '0.875rem',
         marginBottom: theme.spacing(),
       },
-      fontFamily: theme.font.normal,
+      font: theme.font.normal,
     },
     backgroundColor: theme.bg.bgPaper,
     borderLeft: `5px solid ${theme.palette.warning.dark}`,
@@ -138,7 +138,7 @@ const StyledRootDiv = styled('div', { label: 'StyledRootDiv' })(
 const StyledVolumeUl = styled('ul', { label: 'StyledVolumeUl' })(
   ({ theme }) => ({
     '& li': {
-      fontFamily: theme.font.bold,
+      font: theme.font.bold,
     },
     marginTop: theme.spacing(),
   })

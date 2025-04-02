@@ -1,8 +1,27 @@
+import {
+  alertAdditionalFilterKeyMap,
+  applicableAdditionalFilterKeys,
+} from '../AlertsResources/constants';
+
 import type { CloudPulseResources } from '../../shared/CloudPulseResourcesSelect';
 import type { AlertInstance } from '../AlertsResources/DisplayAlertResources';
-import type { Region } from '@linode/api-v4';
+import type {
+  AlertAdditionalFilterKey,
+  AlertFilterKey,
+  AlertFilterType,
+  AlertResourceFiltersProps,
+} from '../AlertsResources/types';
+import type { AlertServiceType, Region } from '@linode/api-v4';
+import type { CloudPulseResourceTypeMapFlag } from 'src/featureFlags';
 
 interface FilterResourceProps {
+  /**
+   * Additional filters for filtering the instances
+   */
+  additionalFilters?: Record<
+    AlertAdditionalFilterKey,
+    AlertFilterType | undefined
+  >;
   /**
    * The data to be filtered
    */
@@ -15,6 +34,7 @@ interface FilterResourceProps {
    * Property to integrate and edit the resources associated with alerts
    */
   isAdditionOrDeletionNeeded?: boolean;
+
   /**
    * The map that holds the id of the region to Region object, helps in building the alert resources
    */
@@ -31,9 +51,43 @@ interface FilterResourceProps {
   searchText?: string;
 
   /**
+   * Property to filter out only checked resources
+   */
+  selectedOnly?: boolean;
+
+  /**
    * This property helps to track the list of selected resources
    */
   selectedResources?: string[];
+}
+
+interface FilterRendererProps {
+  /**
+   * The filter to which the props needs to built for
+   */
+  filterKey: AlertFilterKey;
+
+  /**
+   * Callback to publish the selected engine type
+   */
+  handleFilterChange: (
+    engineType: string | undefined,
+    type: AlertAdditionalFilterKey
+  ) => void;
+  /**
+   * Callback for publishing the IDs of the selected regions.
+   */
+  handleFilteredRegionsChange: (regions: string[]) => void;
+
+  /**
+   * The regions to be displayed according to the resources associated with alerts
+   */
+  regionOptions: Region[];
+
+  /**
+   * The tags to be displayed according to the resources associated with alerts
+   */
+  tagOptions: string[];
 }
 
 /**
@@ -84,6 +138,31 @@ export const getRegionOptions = (
 };
 
 /**
+ * @param aclpResourceTypeMap The launch darkly flag where supported region ids are listed
+ * @param serviceType The service type associated with the alerts
+ * @returns Array of supported regions associated with the resource ids of the alert
+ */
+export const getSupportedRegionIds = (
+  aclpResourceTypeMap: CloudPulseResourceTypeMapFlag[] | undefined,
+  serviceType: AlertServiceType | undefined
+): string[] | undefined => {
+  const resourceTypeFlag = aclpResourceTypeMap?.find(
+    (item: CloudPulseResourceTypeMapFlag) => item.serviceType === serviceType
+  );
+
+  if (
+    resourceTypeFlag?.supportedRegionIds === null ||
+    resourceTypeFlag?.supportedRegionIds === undefined
+  ) {
+    return undefined;
+  }
+
+  return resourceTypeFlag.supportedRegionIds
+    .split(',')
+    .map((regionId: string) => regionId.trim());
+};
+
+/**
  * @param filterProps Props required to filter the resources on the table
  * @returns Filtered instances to be displayed on the table
  */
@@ -91,12 +170,14 @@ export const getFilteredResources = (
   filterProps: FilterResourceProps
 ): AlertInstance[] => {
   const {
+    additionalFilters,
     data,
     filteredRegions,
     isAdditionOrDeletionNeeded,
     regionsIdToRegionMap,
     resourceIds,
     searchText,
+    selectedOnly,
     selectedResources,
   } = filterProps;
   if (!data || (!isAdditionOrDeletionNeeded && resourceIds.length === 0)) {
@@ -122,7 +203,7 @@ export const getFilteredResources = (
           : '',
       };
     })
-    .filter(({ label, region }) => {
+    .filter(({ checked, label, region }) => {
       const matchesSearchText =
         !searchText ||
         region.toLocaleLowerCase().includes(searchText.toLocaleLowerCase()) ||
@@ -132,15 +213,55 @@ export const getFilteredResources = (
         !filteredRegions?.length ||
         (region.length && filteredRegions.includes(region)); // check with filtered region
 
-      return matchesSearchText && matchesFilteredRegions; // match the search text and match the region selected
-    });
+      return (
+        // if selected only, show only checked, else everything
+        matchesSearchText &&
+        matchesFilteredRegions &&
+        (!selectedOnly || checked)
+      ); // match the search text and match the region selected
+    })
+    .filter((resource) => applyAdditionalFilter(resource, additionalFilters));
+};
+
+/**
+ * Applies the additional filters on the instance that needs to be shown in the resources table
+ * @param resource The instance for which the filters needs to be applied
+ * @param additionalFilters The additional filters which are needed to be applied for the instances
+ */
+const applyAdditionalFilter = (
+  resource: AlertInstance,
+  additionalFilters?: Record<
+    AlertAdditionalFilterKey,
+    AlertFilterType | undefined
+  >
+): boolean => {
+  if (!additionalFilters) {
+    return true;
+  }
+  return applicableAdditionalFilterKeys.every((key) => {
+    const value = additionalFilters[key];
+    if (value === undefined) {
+      return true;
+    } // Skip if no filter value
+    // Only apply filters that exist in `alertAdditionalFilterKeyMap`
+    const mappedKey = alertAdditionalFilterKeyMap[key];
+    const resourceValue = resource[mappedKey];
+
+    if (Array.isArray(resourceValue) && Array.isArray(value)) {
+      return value.some((obj) => resourceValue.includes(obj));
+    }
+
+    return resourceValue === value;
+  });
 };
 
 /**
  * This methods scrolls to the given HTML Element
  * @param scrollToElement The HTML Element to which we need to scroll
  */
-export const scrollToElement = (scrollToElement: HTMLDivElement | null) => {
+export const scrollToElement = (
+  scrollToElement: HTMLButtonElement | HTMLDivElement | null
+) => {
   if (scrollToElement) {
     window.scrollTo({
       behavior: 'smooth',
@@ -163,4 +284,61 @@ export const isAllPageSelected = (data: AlertInstance[]): boolean => {
  */
 export const isSomeSelected = (data: AlertInstance[]): boolean => {
   return Boolean(data?.length) && data.some(({ checked }) => checked);
+};
+
+/**
+ * Checks if two sets of resource IDs contain the same elements, regardless of order.
+ * @param originalResourceIds - The initial list of resource IDs.
+ * @param selectedResourceIds - The updated list of resource IDs to compare.
+ * @returns {boolean} - True if both sets contain the same elements, otherwise false.
+ */
+export const isResourcesEqual = (
+  originalResourceIds: string[] | undefined,
+  selectedResourceIds: string[]
+): boolean => {
+  if (!originalResourceIds) {
+    return selectedResourceIds.length === 0;
+  }
+
+  if (originalResourceIds?.length !== selectedResourceIds.length) {
+    return false;
+  }
+
+  const originalSet = new Set(originalResourceIds);
+  return selectedResourceIds.every((id) => originalSet.has(id));
+};
+
+/**
+ * Generates the appropriate filter props based on the provided filter key.
+ *
+ * This function returns the necessary props for rendering either an engine type filter
+ * (`AlertsEngineOptionProps`) or a region filter (`AlertsRegionProps`), depending on the
+ * `filterKey` value. It ensures that the correct handler and options are passed for
+ * each filter type.
+ *
+ * @param {FilterRendererProps} props - The properties required to determine the filter behavior.
+ * @param {AlertFilterKey} props.filterKey - The key identifying the filter type (`'engineType'` or `'region'`).
+ * @param {(value: AlertFilterType, filterKey: AlertFilterKey) => void} props.handleFilterChange -
+ *        Callback function for updating the selected engine type.
+ * @param {(selectedRegions: string[]) => void} props.handleFilteredRegionsChange -
+ *        Callback function for updating the selected regions.
+ * @param {Region[]} props.regionOptions - The list of available regions for filtering.
+ */
+export const getAlertResourceFilterProps = ({
+  filterKey,
+  handleFilterChange,
+  handleFilteredRegionsChange: handleSelectionChange,
+  regionOptions,
+  tagOptions,
+}: FilterRendererProps): AlertResourceFiltersProps => {
+  switch (filterKey) {
+    case 'engineType':
+      return { handleFilterChange };
+    case 'region':
+      return { handleSelectionChange, regionOptions };
+    case 'tags':
+      return { handleFilterChange, tagOptions };
+    default:
+      return { handleFilterChange };
+  }
 };

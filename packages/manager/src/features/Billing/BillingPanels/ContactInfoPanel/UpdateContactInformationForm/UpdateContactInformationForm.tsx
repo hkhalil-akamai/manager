@@ -1,12 +1,27 @@
-import { Checkbox, Notice, TextField, Typography } from '@linode/ui';
-import Grid from '@mui/material/Unstable_Grid2';
+import {
+  accountQueries,
+  useAccount,
+  useMutateAccount,
+  useMutateAccountAgreements,
+  useNotificationsQuery,
+  useProfile,
+} from '@linode/queries';
+import {
+  ActionsPanel,
+  Autocomplete,
+  Checkbox,
+  Notice,
+  TextField,
+  Typography,
+} from '@linode/ui';
+import Grid from '@mui/material/Grid2';
+import { useQueryClient } from '@tanstack/react-query';
 import { allCountries } from 'country-region-data';
 import { useFormik } from 'formik';
+import { enqueueSnackbar } from 'notistack';
 import * as React from 'react';
 import { makeStyles } from 'tss-react/mui';
 
-import { ActionsPanel } from 'src/components/ActionsPanel/ActionsPanel';
-import EnhancedSelect from 'src/components/EnhancedSelect/Select';
 import { Link } from 'src/components/Link';
 import { reportException } from 'src/exceptionReporting';
 import {
@@ -18,14 +33,10 @@ import {
   TAX_ID_HELPER_TEXT,
 } from 'src/features/Billing/constants';
 import { useRestrictedGlobalGrantCheck } from 'src/hooks/useRestrictedGlobalGrantCheck';
-import { useAccount, useMutateAccount } from 'src/queries/account/account';
-import { useMutateAccountAgreements } from 'src/queries/account/agreements';
-import { useNotificationsQuery } from 'src/queries/account/notifications';
-import { useProfile } from 'src/queries/profile/profile';
 import { getErrorMap } from 'src/utilities/errorUtils';
 
-import type { Item } from 'src/components/EnhancedSelect/Select';
-
+import type { Account } from '@linode/api-v4';
+import type { SelectOption } from '@linode/ui';
 interface Props {
   focusEmail: boolean;
   onClose: () => void;
@@ -36,6 +47,7 @@ const excludedUSRegions = ['Micronesia', 'Marshall Islands', 'Palau'];
 const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
   const { data: account } = useAccount();
   const { error, isPending, mutateAsync } = useMutateAccount();
+  const queryClient = useQueryClient();
   const { data: notifications, refetch } = useNotificationsQuery();
   const { mutateAsync: updateAccountAgreements } = useMutateAccountAgreements();
   const { classes } = useStyles();
@@ -77,7 +89,38 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
         delete clonedValues.company;
       }
 
-      await mutateAsync(clonedValues);
+      await mutateAsync(clonedValues, {
+        onSuccess: (account) => {
+          queryClient.setQueryData<Account | undefined>(
+            accountQueries.account.queryKey,
+            (prevAccount) => {
+              if (!prevAccount) {
+                return account;
+              }
+
+              if (
+                isTaxIdEnabled &&
+                account.tax_id &&
+                account.country !== 'US' &&
+                prevAccount?.tax_id !== account.tax_id
+              ) {
+                enqueueSnackbar(
+                  "You edited the Tax Identification Number. It's being verified. You'll get an email with the verification result.",
+                  {
+                    hideIconVariant: false,
+                    variant: 'info',
+                  }
+                );
+                queryClient.invalidateQueries({
+                  queryKey: accountQueries.notifications.queryKey,
+                });
+              }
+
+              return account;
+            }
+          );
+        },
+      });
 
       if (billingAgreementChecked) {
         try {
@@ -150,12 +193,14 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
    * - region[0] is the readable name of the region (e.g. "Alabama")
    * - region[1] is the ISO 3166-2 code of the region (e.g. "AL")
    */
-  const countryResults: Item<string>[] = (allCountries || []).map((country) => {
-    return {
-      label: country[0],
-      value: country[1],
-    };
-  });
+  const countryResults: SelectOption<string>[] = (allCountries || []).map(
+    (country) => {
+      return {
+        label: country[0],
+        value: country[1],
+      };
+    }
+  );
 
   const currentCountryResult = (allCountries || []).filter((country) =>
     formik.values.country
@@ -200,7 +245,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
     formik.setFieldValue('company', '');
   }
 
-  const handleCountryChange = (item: Item<string>) => {
+  const handleCountryChange = (item: SelectOption<string>) => {
     formik.setFieldValue('country', item.value);
     formik.setFieldValue('tax_id', '');
   };
@@ -217,7 +262,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
         spacing={0}
       >
         {isReadOnly && (
-          <Grid xs={12}>
+          <Grid size={12}>
             <Notice
               text={getRestrictedResourceText({
                 isChildUser,
@@ -228,11 +273,11 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
           </Grid>
         )}
         {generalError && (
-          <Grid xs={12}>
+          <Grid size={12}>
             <Notice text={generalError} variant="error" />
           </Grid>
         )}
-        <Grid xs={12}>
+        <Grid size={12}>
           <TextField
             data-qa-contact-email
             disabled={isReadOnly}
@@ -248,7 +293,12 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.email}
           />
         </Grid>
-        <Grid sm={6} xs={12}>
+        <Grid
+          size={{
+            sm: 6,
+            xs: 12,
+          }}
+        >
           <TextField
             data-qa-contact-first-name
             disabled={isReadOnly}
@@ -259,7 +309,12 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.first_name}
           />
         </Grid>
-        <Grid sm={6} xs={12}>
+        <Grid
+          size={{
+            sm: 6,
+            xs: 12,
+          }}
+        >
           <TextField
             data-qa-contact-last-name
             disabled={isReadOnly}
@@ -270,7 +325,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.last_name}
           />
         </Grid>
-        <Grid xs={12}>
+        <Grid size={12}>
           <TextField
             data-qa-company
             disabled={isReadOnly || isParentUser}
@@ -281,7 +336,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.company}
           />
         </Grid>
-        <Grid xs={12}>
+        <Grid size={12}>
           <TextField
             data-qa-contact-address-1
             disabled={isReadOnly}
@@ -292,7 +347,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.address_1}
           />
         </Grid>
-        <Grid xs={12}>
+        <Grid size={12}>
           <TextField
             data-qa-contact-address-2
             disabled={isReadOnly}
@@ -304,29 +359,42 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
           />
         </Grid>
 
-        <Grid sm={6} xs={12}>
-          <EnhancedSelect
+        <Grid
+          size={{
+            sm: 6,
+            xs: 12,
+          }}
+        >
+          <Autocomplete
             textFieldProps={{
               dataAttrs: {
                 'data-qa-contact-country': true,
               },
+              required: true,
             }}
             value={countryResults.find(
               ({ value }) => value === formik.values.country
             )}
+            disableClearable
             disabled={isReadOnly}
             errorText={errorMap.country}
-            isClearable={false}
             label="Country"
-            onChange={(item) => handleCountryChange(item)}
+            onChange={(_event, value) => handleCountryChange(value)}
             options={countryResults}
             placeholder="Select a Country"
-            required
           />
         </Grid>
-        <Grid sm={6} xs={12}>
+        <Grid
+          size={{
+            sm: 6,
+            xs: 12,
+          }}
+        >
           {formik.values.country === 'US' || formik.values.country == 'CA' ? (
-            <EnhancedSelect
+            <Autocomplete
+              onChange={(_event, value) =>
+                formik.setFieldValue('state', value?.value)
+              }
               placeholder={
                 formik.values.country === 'US'
                   ? 'Enter state'
@@ -336,19 +404,18 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
                 dataAttrs: {
                   'data-qa-contact-state-province': true,
                 },
+                required: true,
               }}
               value={
                 filteredRegionResults.find(
                   ({ value }) => value === formik.values.state
-                ) ?? null
+                ) ?? undefined
               }
+              disableClearable
               disabled={isReadOnly}
               errorText={errorMap.state}
-              isClearable={false}
               label={`${formik.values.country === 'US' ? 'State' : 'Province'}`}
-              onChange={(item) => formik.setFieldValue('state', item.value)}
               options={filteredRegionResults}
-              required
             />
           ) : (
             <TextField
@@ -364,7 +431,12 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             />
           )}
         </Grid>
-        <Grid sm={6} xs={12}>
+        <Grid
+          size={{
+            sm: 6,
+            xs: 12,
+          }}
+        >
           <TextField
             data-qa-contact-city
             disabled={isReadOnly}
@@ -375,7 +447,12 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.city}
           />
         </Grid>
-        <Grid sm={6} xs={12}>
+        <Grid
+          size={{
+            sm: 6,
+            xs: 12,
+          }}
+        >
           <TextField
             data-qa-contact-post-code
             disabled={isReadOnly}
@@ -386,7 +463,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.zip}
           />
         </Grid>
-        <Grid xs={12}>
+        <Grid size={12}>
           <TextField
             data-qa-contact-phone
             disabled={isReadOnly}
@@ -398,7 +475,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
             value={formik.values.phone}
           />
         </Grid>
-        <Grid xs={12}>
+        <Grid size={12}>
           <TextField
             data-qa-contact-tax-id
             disabled={isReadOnly}
@@ -412,17 +489,19 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
         </Grid>
         {nonUSCountry && (
           <Grid
-            alignItems="flex-start"
-            display="flex"
-            marginTop={(theme) => theme.tokens.spacing[60]}
-            xs={12}
+            sx={{
+              alignItems: 'flex-start',
+              display: 'flex',
+              marginTop: (theme) => theme.tokens.spacing.S16,
+            }}
+            size={12}
           >
             <Checkbox
               onChange={() =>
                 setBillingAgreementChecked(!billingAgreementChecked)
               }
               sx={(theme) => ({
-                marginRight: theme.tokens.spacing[40],
+                marginRight: theme.tokens.spacing.S8,
                 padding: 0,
               })}
               checked={billingAgreementChecked}
@@ -441,10 +520,7 @@ const UpdateContactInformationForm = ({ focusEmail, onClose }: Props) => {
       <ActionsPanel
         primaryButtonProps={{
           'data-testid': 'save-contact-info',
-          disabled:
-            isReadOnly ||
-            (nonUSCountry &&
-              (!billingAgreementChecked || !formik.values.tax_id)),
+          disabled: isReadOnly || (nonUSCountry && !billingAgreementChecked),
           label: 'Save Changes',
           loading: isPending,
           type: 'submit',

@@ -1,15 +1,15 @@
+import { useProfile } from '@linode/queries';
 import { Typography } from '@linode/ui';
-import Grid from '@mui/material/Unstable_Grid2/Grid2';
+import { formatUptime } from '@linode/utilities';
+import Grid from '@mui/material/Grid2';
 import * as React from 'react';
 import { compose } from 'recompose';
 
 import { EditableEntityLabel } from 'src/components/EditableEntityLabel/EditableEntityLabel';
 import { Link } from 'src/components/Link';
 import withClientStats from 'src/containers/longview.stats.container';
-import { useProfile } from 'src/queries/profile/profile';
 import { getAPIErrorOrDefault } from 'src/utilities/errorUtils';
 import { formatDate } from 'src/utilities/formatDate';
-import { formatUptime } from 'src/utilities/formatUptime';
 
 import { getPackageNoticeText } from '../shared/utilities';
 import {
@@ -74,7 +74,7 @@ export const LongviewClientHeader = enhanced(
 
     const hostname =
       longviewClientData.SysInfo?.hostname ?? 'Hostname not available';
-    const uptime = longviewClientData?.uptime ?? null;
+    const uptime = longviewClientData?.Uptime ?? null;
     const formattedUptime =
       uptime !== null ? `Up ${formatUptime(uptime)}` : 'Uptime not available';
     const packages = longviewClientData?.Packages ?? null;

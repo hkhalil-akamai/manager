@@ -48,7 +48,7 @@ export interface FirewallRuleType {
 export interface FirewallDeviceEntity {
   id: number;
   type: FirewallDeviceEntityType;
-  label: string;
+  label: string | null;
   url: string;
 }
 
@@ -67,14 +67,14 @@ export interface FirewallTemplate {
 }
 
 export interface CreateFirewallPayload {
-  label?: string;
+  label: string;
   tags?: string[];
   rules: UpdateFirewallRules;
   devices?: {
     linodes?: number[];
     nodebalancers?: number[];
     interfaces?: number[];
-  };
+  } | null;
 }
 
 export interface UpdateFirewallPayload {
@@ -89,10 +89,10 @@ export interface FirewallDevicePayload {
 }
 
 export interface DefaultFirewallIDs {
-  public_interface: number;
-  vpc_interface: number;
-  linode: number;
-  nodebalancer: number;
+  public_interface: number | null;
+  vpc_interface: number | null;
+  linode: number | null;
+  nodebalancer: number | null;
 }
 
 export interface FirewallSettings {

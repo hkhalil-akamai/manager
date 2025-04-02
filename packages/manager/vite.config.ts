@@ -51,6 +51,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['cloud.lindev.local'],
     port: 3000,
   },
   test: {

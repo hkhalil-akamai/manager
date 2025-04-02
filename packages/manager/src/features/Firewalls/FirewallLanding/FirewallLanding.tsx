@@ -1,9 +1,9 @@
-import { Button, CircleProgress } from '@linode/ui';
-import { createLazyRoute } from '@tanstack/react-router';
+import { useFirewallsQuery } from '@linode/queries';
+import { Button, CircleProgress, ErrorState } from '@linode/ui';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import * as React from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
 
-import { ErrorState } from 'src/components/ErrorState/ErrorState';
+import { DocumentTitleSegment } from 'src/components/DocumentTitle';
 import { GenerateFirewallDialog } from 'src/components/GenerateFirewallDialog/GenerateFirewallDialog';
 import { Hidden } from 'src/components/Hidden';
 import { LandingHeader } from 'src/components/LandingHeader';
@@ -20,7 +20,6 @@ import { useOrder } from 'src/hooks/useOrder';
 import { usePagination } from 'src/hooks/usePagination';
 import { useRestrictedGlobalGrantCheck } from 'src/hooks/useRestrictedGlobalGrantCheck';
 import { useSecureVMNoticesEnabled } from 'src/hooks/useSecureVMNoticesEnabled';
-import { useFirewallsQuery } from 'src/queries/firewalls';
 import { getAPIErrorOrDefault } from 'src/utilities/errorUtils';
 
 import { CreateFirewallDrawer } from './CreateFirewallDrawer';
@@ -34,8 +33,8 @@ import type { Mode } from './FirewallDialog';
 const preferenceKey = 'firewalls';
 
 const FirewallLanding = () => {
+  const navigate = useNavigate();
   const location = useLocation();
-  const history = useHistory();
   const pagination = usePagination(1, preferenceKey);
   const { handleOrderChange, order, orderBy } = useOrder(
     {
@@ -97,11 +96,11 @@ const FirewallLanding = () => {
   };
 
   const onOpenCreateDrawer = () => {
-    history.replace('/firewalls/create');
+    navigate({ to: '/firewalls/create' });
   };
 
   const onCloseCreateDrawer = () => {
-    history.replace('/firewalls');
+    navigate({ to: '/firewalls' });
   };
 
   const handlers: FirewallHandlers = {
@@ -139,6 +138,11 @@ const FirewallLanding = () => {
 
   return (
     <React.Fragment>
+      <DocumentTitleSegment
+        segment={`${
+          isCreateFirewallDrawerOpen ? 'Create a Firewall' : 'Firewall'
+        }`}
+      />
       <LandingHeader
         buttonDataAttrs={{
           tooltipText: getRestrictedResourceText({
@@ -187,7 +191,7 @@ const FirewallLanding = () => {
               <TableCell>Rules</TableCell>
               <TableCell>Services</TableCell>
             </Hidden>
-            <TableCell></TableCell>
+            <TableCell />
           </TableRow>
         </TableHead>
         <TableBody>
@@ -224,9 +228,5 @@ const FirewallLanding = () => {
     </React.Fragment>
   );
 };
-
-export const firewallLandingLazyRoute = createLazyRoute('/firewalls')({
-  component: FirewallLanding,
-});
 
 export default React.memo(FirewallLanding);

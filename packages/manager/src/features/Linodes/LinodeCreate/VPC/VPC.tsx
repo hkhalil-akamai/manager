@@ -1,3 +1,4 @@
+import { useAllVPCsQuery, useRegionsQuery } from '@linode/queries';
 import {
   Autocomplete,
   Box,
@@ -11,6 +12,7 @@ import {
   TooltipIcon,
   Typography,
 } from '@linode/ui';
+import { doesRegionSupportFeature } from '@linode/utilities';
 import React, { useState } from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 
@@ -21,10 +23,7 @@ import {
   VPC_AUTO_ASSIGN_IPV4_TOOLTIP,
 } from 'src/features/VPCs/constants';
 import { VPCCreateDrawer } from 'src/features/VPCs/VPCCreateDrawer/VPCCreateDrawer';
-import { useRegionsQuery } from 'src/queries/regions/regions';
-import { useAllVPCsQuery } from 'src/queries/vpcs/vpcs';
 import { sendLinodeCreateFormInputEvent } from 'src/utilities/analytics/formEventAnalytics';
-import { doesRegionSupportFeature } from 'src/utilities/doesRegionSupportFeature';
 
 import { useLinodeCreateQueryParams } from '../utilities';
 import { VPCRanges } from './VPCRanges';
@@ -286,7 +285,7 @@ export const VPC = () => {
                     />
                   </Stack>
                   <Divider />
-                  <Typography fontFamily={(theme) => theme.font.bold}>
+                  <Typography sx={(theme) => ({ font: theme.font.bold })}>
                     Assign additional IPv4 ranges
                   </Typography>
                   {formState.errors.interfaces?.[1] &&

@@ -1,3 +1,4 @@
+import { useAccountSettings, useProfile } from '@linode/queries';
 import {
   Accordion,
   Box,
@@ -12,9 +13,7 @@ import * as React from 'react';
 
 import { Link } from 'src/components/Link';
 import { TypeToConfirmDialog } from 'src/components/TypeToConfirmDialog/TypeToConfirmDialog';
-import { useAccountSettings } from 'src/queries/account/settings';
 import { useCancelObjectStorageMutation } from 'src/queries/object-storage/queries';
-import { useProfile } from 'src/queries/profile/profile';
 
 export const ObjectStorageSettings = () => {
   const { data: profile } = useProfile();
@@ -93,6 +92,7 @@ export const ObjectStorageSettings = () => {
           subType: 'ObjectStorage',
           type: 'AccountSetting',
         }}
+        errors={error}
         label="Username"
         loading={isCancelLoading}
         onClick={handleCancelObjectStorage}
@@ -100,7 +100,6 @@ export const ObjectStorageSettings = () => {
         open={isCancelDialogOpen}
         title="Cancel Object Storage"
       >
-        {error && <Notice text={error[0].reason} variant="error" />}
         <Notice variant="warning">
           <Typography sx={{ fontSize: '0.875rem' }}>
             <strong>Warning:</strong> Canceling Object Storage will permanently

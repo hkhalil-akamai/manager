@@ -41,16 +41,38 @@ export type DatabaseStatus =
   | 'resuming'
   | 'suspended'
   | 'suspending';
-
+/** @deprecated TODO (UIE-8214) remove after migration */
 export type DatabaseBackupType = 'snapshot' | 'auto';
-
+/** @deprecated TODO (UIE-8214) remove after migration */
 export interface DatabaseBackup {
   id: number;
   type: DatabaseBackupType;
   label: string;
   created: string;
 }
+export interface ConfigurationItem {
+  description?: string;
+  example?: string | number | boolean;
+  minimum?: number; // min value for the number input
+  maximum?: number; // max value for the number input
+  maxLength?: number; // max length for the text input
+  minLength?: number; // min length for the text input
+  pattern?: string;
+  type?: string | [string, null] | string[];
+  enum?: string[];
+  restart_cluster?: boolean;
+}
 
+export type ConfigValue = number | string | boolean;
+
+export type ConfigCategoryValues = Record<string, ConfigValue>;
+export type DatabaseEngineConfig = Record<
+  string,
+  Record<string, ConfigurationItem> | ConfigurationItem
+>;
+export interface DatabaseInstanceAdvancedConfig {
+  [category: string]: ConfigCategoryValues | ConfigValue;
+}
 export interface DatabaseFork {
   source: number;
   restore_time?: string;
@@ -99,6 +121,7 @@ export interface DatabaseInstance {
   updated: string;
   updates: UpdatesSchedule;
   version: string;
+  engine_config: DatabaseInstanceAdvancedConfig;
 }
 
 export type ClusterSize = 1 | 2 | 3;
@@ -211,4 +234,5 @@ export interface UpdateDatabasePayload {
   updates?: UpdatesSchedule;
   type?: string;
   version?: string;
+  engine_config?: DatabaseInstanceAdvancedConfig;
 }

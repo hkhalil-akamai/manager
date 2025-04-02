@@ -1,8 +1,7 @@
-import { CircleProgress, Notice, Paper } from '@linode/ui';
+import { CircleProgress, ErrorState, Notice, Paper } from '@linode/ui';
 import * as React from 'react';
 import { compose } from 'recompose';
 
-import { ErrorState } from 'src/components/ErrorState/ErrorState';
 import { LandingHeader } from 'src/components/LandingHeader';
 import { NotFound } from 'src/components/NotFound';
 import { SuspenseLoader } from 'src/components/SuspenseLoader';
@@ -14,7 +13,7 @@ import withClientStats from 'src/containers/longview.stats.container';
 import { get } from 'src/features/Longview/request';
 import { useAPIRequest } from 'src/hooks/useAPIRequest';
 import { useTabs } from 'src/hooks/useTabs';
-import { useProfile } from 'src/queries/profile/profile';
+import { useProfile } from '@linode/queries';
 
 import { useClientLastUpdated } from '../shared/useClientLastUpdated';
 import { Apache } from './DetailTabs/Apache/Apache';
@@ -301,10 +300,10 @@ type LongviewDetailParams = {
 const EnhancedLongviewDetail = compose<CombinedProps, {}>(
   React.memo,
 
-  withClientStats<{ params: LongviewDetailParams }>((ownProps) => {
-    return +(ownProps?.params?.id ?? '');
+  withClientStats<{ match: { params: LongviewDetailParams } }>((ownProps) => {
+    return +(ownProps?.match?.params?.id ?? '');
   }),
-  withLongviewClients<Props, { params: LongviewDetailParams }>(
+  withLongviewClients<Props, { match: { params: LongviewDetailParams } }>(
     (
       own,
       {
@@ -317,7 +316,7 @@ const EnhancedLongviewDetail = compose<CombinedProps, {}>(
       // This is explicitly typed, otherwise `client` would be typed as
       // `LongviewClient`, even though there's a chance it could be undefined.
       const client: LongviewClient | undefined =
-        longviewClientsData[own.params.id ?? ''];
+        longviewClientsData[own?.match.params.id ?? ''];
 
       return {
         client,

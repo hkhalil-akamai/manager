@@ -3,6 +3,7 @@ import React from 'react';
 import {
   CheckIcon,
   AlertIcon as ErrorIcon,
+  InfoIcon,
   WarningIcon,
 } from '../../assets/icons';
 import { Box } from '../Box';
@@ -142,7 +143,7 @@ export const Notice = (props: NoticeProps) => {
           marginBottom:
             spacingBottom !== undefined
               ? `${spacingBottom}px`
-              : theme.spacing(3),
+              : theme.spacing(1),
           marginLeft: spacingLeft !== undefined ? `${spacingLeft}px` : 0,
           marginTop: spacingTop !== undefined ? `${spacingTop}px` : 0,
         }),
@@ -153,7 +154,7 @@ export const Notice = (props: NoticeProps) => {
       {...rest}
     >
       {important && variantMap.error && <ErrorIcon className={classes.icon} />}
-      {important && variantMap.info && <WarningIcon className={classes.icon} />}
+      {important && variantMap.info && <InfoIcon className={classes.icon} />}
       {important && variantMap.success && (
         <CheckIcon className={classes.icon} />
       )}

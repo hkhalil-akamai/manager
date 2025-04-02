@@ -1,7 +1,6 @@
 import { Box } from '@linode/ui';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { isEmpty } from 'ramda';
 import * as React from 'react';
 
 import { ActionMenu } from 'src/components/ActionMenu/ActionMenu';
@@ -26,7 +25,6 @@ interface Props {
 export const LinodeNetworkingActionMenu = (props: Props) => {
   const theme = useTheme<Theme>();
   const matchesMdDown = useMediaQuery(theme.breakpoints.down('lg'));
-
   const {
     ipAddress,
     ipType,
@@ -38,15 +36,15 @@ export const LinodeNetworkingActionMenu = (props: Props) => {
   } = props;
 
   const showEdit = ![
-    'IPv4 – Private',
-    'IPv4 – Reserved (private)',
-    'IPv4 – Reserved (public)',
-    'IPv4 – VPC',
-    'IPv6 – Link Local',
-    'VPC IPv4 – NAT',
+    'Link Local – IPv6',
+    'Private – IPv4',
+    'Reserved IPv4 (private)',
+    'Reserved IPv4 (public)',
+    'VPC NAT – IPv4',
+    'VPC – IPv4',
   ].includes(ipType);
 
-  const deletableIPTypes = ['IPv4 – Public', 'IPv4 – Private', 'IPv6 – Range'];
+  const deletableIPTypes = ['Private – IPv4', 'Public – IPv4', 'Range – IPv6'];
 
   // if we have a 116 we don't want to give the option to remove it
   const is116Range = ipAddress?.prefix === 116;
@@ -102,7 +100,7 @@ export const LinodeNetworkingActionMenu = (props: Props) => {
       : null,
   ].filter(Boolean) as Action[];
 
-  return !isEmpty(actions) ? (
+  return actions.length > 0 ? (
     <>
       {!matchesMdDown &&
         actions.map((action) => {

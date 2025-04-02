@@ -1,34 +1,67 @@
-import { CircleProgress, Stack, Typography } from '@linode/ui';
-import { Grid } from '@mui/material';
+import { useRegionsQuery } from '@linode/queries';
+import { Checkbox, CircleProgress, Stack, Typography } from '@linode/ui';
+import { Grid, useTheme } from '@mui/material';
 import React from 'react';
 
-import EntityIcon from 'src/assets/icons/entityIcons/alerts.svg';
+import EntityIcon from 'src/assets/icons/entityIcons/alertsresources.svg';
 import { DebouncedSearchTextField } from 'src/components/DebouncedSearchTextField';
+import { useFlags } from 'src/hooks/useFlags';
 import { useResourcesQuery } from 'src/queries/cloudpulse/resources';
-import { useRegionsQuery } from 'src/queries/regions/regions';
 
 import { StyledPlaceholder } from '../AlertsDetail/AlertDetail';
+import { MULTILINE_ERROR_SEPARATOR } from '../constants';
+import { AlertListNoticeMessages } from '../Utils/AlertListNoticeMessages';
 import {
+  getAlertResourceFilterProps,
   getFilteredResources,
   getRegionOptions,
   getRegionsIdRegionMap,
+  getSupportedRegionIds,
   scrollToElement,
 } from '../Utils/AlertResourceUtils';
-import { AlertsRegionFilter } from './AlertsRegionFilter';
+import { AlertResourcesFilterRenderer } from './AlertsResourcesFilterRenderer';
+import { AlertsResourcesNotice } from './AlertsResourcesNotice';
+import { databaseTypeClassMap, serviceToFiltersMap } from './constants';
 import { DisplayAlertResources } from './DisplayAlertResources';
 
 import type { AlertInstance } from './DisplayAlertResources';
-import type { Region } from '@linode/api-v4';
+import type {
+  AlertAdditionalFilterKey,
+  AlertFilterKey,
+  AlertFilterType,
+} from './types';
+import type {
+  AlertClass,
+  AlertDefinitionType,
+  AlertServiceType,
+  Filter,
+  Region,
+} from '@linode/api-v4';
 
 export interface AlertResourcesProp {
+  /**
+   * Class of the alert (dedicated / shared)
+   */
+  alertClass?: AlertClass;
   /**
    * The label of the alert to be displayed
    */
   alertLabel?: string;
+
   /**
    * The set of resource ids associated with the alerts, that needs to be displayed
    */
   alertResourceIds: string[];
+
+  /**
+   * The type of the alert system | user
+   */
+  alertType: AlertDefinitionType;
+
+  /**
+   * The error text that needs to displayed incase needed
+   */
+  errorText?: string;
 
   /**
    * Callback for publishing the selected resources
@@ -36,22 +69,45 @@ export interface AlertResourcesProp {
   handleResourcesSelection?: (resources: string[]) => void;
 
   /**
+   * Property to control the visibility of the title
+   */
+  hideLabel?: boolean;
+
+  /**
    * This controls whether we need to show the checkbox in case of editing the resources
    */
   isSelectionsNeeded?: boolean;
 
   /**
+   * The maximum number of elements that can be selected
+   */
+  maxSelectionCount?: number;
+
+  /**
+   * The element until which we need to scroll on pagination and order change
+   */
+  scrollElement?: HTMLDivElement | null;
+
+  /**
    * The service type associated with the alerts like DBaaS, Linode etc.,
    */
-  serviceType: string;
+  serviceType?: AlertServiceType;
 }
+
+export type SelectDeselectAll = 'Deselect All' | 'Select All';
 
 export const AlertResources = React.memo((props: AlertResourcesProp) => {
   const {
+    alertClass,
     alertLabel,
     alertResourceIds,
+    alertType,
+    errorText,
     handleResourcesSelection,
+    hideLabel,
     isSelectionsNeeded,
+    maxSelectionCount,
+    scrollElement,
     serviceType,
   } = props;
   const [searchText, setSearchText] = React.useState<string>();
@@ -59,22 +115,77 @@ export const AlertResources = React.memo((props: AlertResourcesProp) => {
   const [selectedResources, setSelectedResources] = React.useState<string[]>(
     alertResourceIds
   );
+  const [selectedOnly, setSelectedOnly] = React.useState<boolean>(false);
+  const [additionalFilters, setAdditionalFilters] = React.useState<
+    Record<AlertAdditionalFilterKey, AlertFilterType>
+  >({ engineType: undefined, tags: undefined });
 
   const {
     data: regions,
     isError: isRegionsError,
-    isFetching: isRegionsFetching,
+    isLoading: isRegionsLoading,
   } = useRegionsQuery();
+
+  const flags = useFlags();
+  const theme = useTheme();
+
+  // Validate launchDarkly region ids with the ids from regionOptions prop
+  const supportedRegionIds = getSupportedRegionIds(
+    flags.aclpResourceTypeMap,
+    serviceType
+  );
+  const xFilterToBeApplied: Filter | undefined = React.useMemo(() => {
+    const regionFilter: Filter = supportedRegionIds
+      ? {
+          '+or': supportedRegionIds.map((regionId) => ({
+            region: regionId,
+          })),
+        }
+      : {};
+
+    // if service type is other than dbaas, return only region filter
+    if (serviceType !== 'dbaas') {
+      return regionFilter;
+    }
+
+    // Always include platform filter for 'dbaas'
+    const platformFilter: Filter = { platform: 'rdbms-default' };
+
+    // If alertType is not 'system' or alertClass is not defined, return only platform filter
+    if (alertType !== 'system' || !alertClass) {
+      return platformFilter;
+    }
+
+    // Dynamically exclude 'dedicated' if alertClass is 'shared'
+    const filteredTypes =
+      alertClass === 'shared'
+        ? Object.keys(databaseTypeClassMap).filter(
+            (type) => type !== 'dedicated'
+          )
+        : [alertClass];
+
+    // Apply type filter only for DBaaS user alerts with a valid alertClass based on above filtered types
+    const typeFilter: Filter = {
+      '+or': filteredTypes.map((dbType) => ({
+        type: {
+          '+contains': dbType,
+        },
+      })),
+    };
+
+    // Combine all the filters
+    return { ...platformFilter, '+and': [typeFilter, regionFilter] };
+  }, [alertClass, alertType, serviceType, supportedRegionIds]);
 
   const {
     data: resources,
     isError: isResourcesError,
-    isFetching: isResourcesFetching,
+    isLoading: isResourcesLoading,
   } = useResourcesQuery(
     Boolean(serviceType),
     serviceType,
     {},
-    serviceType === 'dbaas' ? { platform: 'rdbms-default' } : {}
+    xFilterToBeApplied
   );
 
   const computedSelectedResources = React.useMemo(() => {
@@ -122,17 +233,26 @@ export const AlertResources = React.memo((props: AlertResourcesProp) => {
     );
   };
 
+  const handleFilterChange = React.useCallback(
+    (value: AlertFilterType, filterKey: AlertFilterKey) => {
+      setAdditionalFilters((prev) => ({ ...prev, [filterKey]: value }));
+    },
+    []
+  );
+
   /**
    * Filters resources based on the provided resource IDs, search text, and filtered regions.
    */
   const filteredResources: AlertInstance[] = React.useMemo(() => {
     return getFilteredResources({
+      additionalFilters,
       data: resources,
       filteredRegions,
       isAdditionOrDeletionNeeded: isSelectionsNeeded,
       regionsIdToRegionMap,
       resourceIds: alertResourceIds,
       searchText,
+      selectedOnly,
       selectedResources,
     });
   }, [
@@ -142,7 +262,9 @@ export const AlertResources = React.memo((props: AlertResourcesProp) => {
     regionsIdToRegionMap,
     alertResourceIds,
     searchText,
+    selectedOnly,
     selectedResources,
+    additionalFilters,
   ]);
 
   const handleSelection = React.useCallback(
@@ -159,38 +281,98 @@ export const AlertResources = React.memo((props: AlertResourcesProp) => {
     [handleResourcesSelection]
   );
 
+  const handleAllSelection = React.useCallback(
+    (action: SelectDeselectAll) => {
+      if (!resources) {
+        return;
+      }
+
+      let currentSelections: string[] = [];
+
+      if (action === 'Deselect All') {
+        // Deselect all
+        setSelectedResources([]);
+      } else {
+        // Select all
+        currentSelections = resources.map(({ id }) => id);
+        setSelectedResources(currentSelections);
+      }
+
+      if (handleResourcesSelection) {
+        handleResourcesSelection(currentSelections); // publish the resources selected
+      }
+    },
+    [handleResourcesSelection, resources]
+  );
+
   const titleRef = React.useRef<HTMLDivElement>(null); // Reference to the component title, used for scrolling to the title when the table's page size or page number changes.
   const isNoResources =
     !isDataLoadingError && !isSelectionsNeeded && alertResourceIds.length === 0;
+  const showEditInformation = isSelectionsNeeded && alertType === 'system';
 
-  if (isResourcesFetching || isRegionsFetching) {
+  if (isResourcesLoading || isRegionsLoading) {
     return <CircleProgress />;
   }
 
   if (isNoResources) {
     return (
       <Stack gap={2}>
-        <Typography ref={titleRef} variant="h2">
-          {alertLabel || 'Resources'}
-          {/* It can be either the passed alert label or just Resources */}
-        </Typography>
+        {!hideLabel && (
+          <Typography ref={titleRef} variant="h2">
+            {alertLabel || 'Resources'}
+            {/* It can be either the passed alert label or just Resources */}
+          </Typography>
+        )}
         <StyledPlaceholder
+          sx={{
+            h2: {
+              fontSize: '16px',
+            },
+          }}
           icon={EntityIcon}
-          subtitle="You can assign alerts during the resource creation process."
-          title="No resources are currently assigned to this alert definition."
+          subtitle="Once you assign the resources, they will show up here."
+          title="No resources associated with this alert definition."
         />
       </Stack>
     );
   }
 
+  const filtersToRender = serviceToFiltersMap[serviceType ?? ''];
+  const noticeStyles: React.CSSProperties = {
+    alignItems: 'center',
+    backgroundColor: theme.tokens.alias.Background.Normal,
+    borderRadius: 1,
+    display: 'flex',
+    flexWrap: 'nowrap',
+    marginBottom: 0,
+    padding: theme.spacingFunction(16),
+  };
   return (
     <Stack gap={2}>
-      <Typography ref={titleRef} variant="h2">
-        {alertLabel || 'Resources'}
-        {/* It can be either the passed alert label or just Resources */}
-      </Typography>
-      <Grid container spacing={3}>
-        <Grid columnSpacing={1} container item rowSpacing={3} xs={12}>
+      {!hideLabel && (
+        <Typography ref={titleRef} variant="h2">
+          {alertLabel || 'Resources'}
+          {/* It can be either the passed alert label or just Resources */}
+        </Typography>
+      )}
+      {showEditInformation && (
+        <Typography ref={titleRef} variant="body1">
+          You can enable or disable this system alert for each resource you have
+          access to. Select the resources listed below you want to enable the
+          alert for.
+        </Typography>
+      )}
+      <Grid container spacing={2}>
+        <Grid
+          sx={{
+            alignItems: 'center',
+          }}
+          columnSpacing={2}
+          container
+          item
+          rowSpacing={3}
+          xs={12}
+        >
           <Grid item md={3} xs={12}>
             <DebouncedSearchTextField
               sx={{
@@ -204,20 +386,86 @@ export const AlertResources = React.memo((props: AlertResourcesProp) => {
               value={searchText || ''}
             />
           </Grid>
+          {/* Dynamically render service type based filters */}
+          {filtersToRender.map(({ component, filterKey }, index) => (
+            <Grid item key={`${index}_${filterKey}`} md={4} xs={12}>
+              <AlertResourcesFilterRenderer
+                componentProps={getAlertResourceFilterProps({
+                  filterKey,
+                  handleFilterChange,
+                  handleFilteredRegionsChange,
+                  regionOptions,
+                  tagOptions: Array.from(
+                    new Set(
+                      resources
+                        ? resources.flatMap(({ tags }) => tags ?? [])
+                        : []
+                    )
+                  ),
+                })}
+                component={component}
+              />
+            </Grid>
+          ))}
+        </Grid>
+        {isSelectionsNeeded && (
           <Grid item md={4} xs={12}>
-            <AlertsRegionFilter
-              handleSelectionChange={handleFilteredRegionsChange}
-              regionOptions={regionOptions}
+            <Checkbox
+              sx={(theme) => ({
+                svg: {
+                  backgroundColor: theme.tokens.color.Neutrals.White,
+                },
+              })}
+              data-testid="show_selected_only"
+              disabled={!(selectedResources.length || selectedOnly)}
+              onClick={() => setSelectedOnly(!selectedOnly)}
+              text="Show Selected Only"
+              value="Show Selected"
             />
           </Grid>
-        </Grid>
+        )}
+        {errorText?.length && (
+          <Grid item xs={12}>
+            <AlertListNoticeMessages
+              errorMessage={errorText}
+              separator={MULTILINE_ERROR_SEPARATOR}
+              style={noticeStyles}
+              variant="error"
+            />
+          </Grid>
+        )}
+        {maxSelectionCount !== undefined && (
+          <Grid item xs={12}>
+            <AlertListNoticeMessages
+              errorMessage={`You can select up to ${maxSelectionCount} resources.`}
+              separator={MULTILINE_ERROR_SEPARATOR}
+              style={noticeStyles}
+              variant="warning"
+            />
+          </Grid>
+        )}
+        {isSelectionsNeeded &&
+          !isDataLoadingError &&
+          resources &&
+          resources.length > 0 && (
+            <Grid item xs={12}>
+              <AlertsResourcesNotice
+                handleSelectionChange={handleAllSelection}
+                selectedResources={selectedResources.length}
+                totalResources={resources?.length ?? 0}
+              />
+            </Grid>
+          )}
         <Grid item xs={12}>
           <DisplayAlertResources
+            scrollToElement={() =>
+              scrollToElement(titleRef.current ?? scrollElement ?? null)
+            }
             filteredResources={filteredResources}
             handleSelection={handleSelection}
             isDataLoadingError={isDataLoadingError}
             isSelectionsNeeded={isSelectionsNeeded}
-            scrollToElement={() => scrollToElement(titleRef.current)}
+            serviceType={serviceType}
           />
         </Grid>
       </Grid>

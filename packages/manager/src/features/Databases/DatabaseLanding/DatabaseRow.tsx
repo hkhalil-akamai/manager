@@ -1,8 +1,9 @@
 import { Chip } from '@linode/ui';
+import { formatStorageUnits } from '@linode/utilities';
 import * as React from 'react';
-import { Link } from 'react-router-dom';
 
 import { Hidden } from 'src/components/Hidden';
+import { Link } from 'src/components/Link';
 import { TableCell } from 'src/components/TableCell';
 import { TableRow } from 'src/components/TableRow';
 import { DatabaseStatusDisplay } from 'src/features/Databases/DatabaseDetail/DatabaseStatusDisplay';
@@ -10,11 +11,9 @@ import { DatabaseEngineVersion } from 'src/features/Databases/DatabaseEngineVers
 import { DatabaseActionMenu } from 'src/features/Databases/DatabaseLanding/DatabaseActionMenu';
 import { useIsDatabasesEnabled } from 'src/features/Databases/utilities';
 import { useDatabaseTypesQuery } from 'src/queries/databases/databases';
-import { useProfile } from 'src/queries/profile/profile';
-import { useRegionsQuery } from 'src/queries/regions/regions';
+import { useProfile, useRegionsQuery } from '@linode/queries';
 import { isWithinDays, parseAPIDate } from 'src/utilities/date';
 import { formatDate } from 'src/utilities/formatDate';
-import { formatStorageUnits } from 'src/utilities/formatStorageUnits';
 
 import type { Event } from '@linode/api-v4';
 import type {
@@ -123,10 +122,10 @@ export const DatabaseRow = ({
       {isDatabasesV2GA && isNewDatabase && (
         <TableCell actionCell>
           <DatabaseActionMenu
-            databaseStatus={status}
             databaseEngine={engine}
             databaseId={id}
             databaseLabel={label}
+            databaseStatus={status}
             handlers={handlers!}
           />
         </TableCell>

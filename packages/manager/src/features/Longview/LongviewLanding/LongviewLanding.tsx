@@ -5,7 +5,6 @@ import {
 import { styled } from '@mui/material/styles';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useSnackbar } from 'notistack';
-import { isEmpty } from 'ramda';
 import * as React from 'react';
 
 import { LandingHeader } from 'src/components/LandingHeader';
@@ -19,7 +18,7 @@ import { getRestrictedResourceText } from 'src/features/Account/utils';
 import { useAPIRequest } from 'src/hooks/useAPIRequest';
 import { useRestrictedGlobalGrantCheck } from 'src/hooks/useRestrictedGlobalGrantCheck';
 import { useTabs } from 'src/hooks/useTabs';
-import { useAccountSettings } from 'src/queries/account/settings';
+import { useAccountSettings } from '@linode/queries';
 import { getAPIErrorOrDefault } from 'src/utilities/errorUtils';
 
 import { SubscriptionDialog } from './SubscriptionDialog';
@@ -161,7 +160,7 @@ export const LongviewLanding = (props: LongviewProps) => {
       </StyledTabs>
       <SubscriptionDialog
         clientLimit={
-          isEmpty(activeSubscriptionRequestHook.data)
+          Object.keys(activeSubscriptionRequestHook.data).length === 0
             ? 10
             : (activeSubscriptionRequestHook.data as LongviewSubscription)
                 .clients_included

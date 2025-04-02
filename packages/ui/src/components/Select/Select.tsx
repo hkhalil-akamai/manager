@@ -48,12 +48,20 @@ export interface SelectProps<T extends { label: string }>
     | 'loading'
     | 'noOptionsText'
     | 'onBlur'
+    | 'open'
     | 'options'
     | 'placeholder'
+    | 'ref'
     | 'sx'
     | 'textFieldProps'
     | 'value'
   > {
+  /**
+   * Whether the Autocomplete should be focused when it mounts.
+   *
+   * @default false
+   */
+  autoFocus?: boolean;
   /**
    * Whether the select can be cleared once a value is selected.
    *
@@ -77,6 +85,14 @@ export interface SelectProps<T extends { label: string }>
    * The label for the select.
    */
   label: string;
+  /**
+   * The props for the ListItem component.
+   */
+  listItemProps?: (
+    value: T
+  ) => {
+    dataAttributes?: Record<string, T | boolean | string>;
+  };
   /**
    * The callback function that is invoked when the value changes.
    */
@@ -111,10 +127,12 @@ export const Select = <T extends SelectOption = SelectOption>(
   props: SelectProps<T>
 ) => {
   const {
+    autoFocus = false,
     clearable = false,
     creatable = false,
     hideLabel = false,
     label,
+    listItemProps,
     loading = false,
     noOptionsText = 'No options available',
     onChange,
@@ -162,6 +180,8 @@ export const Select = <T extends SelectOption = SelectOption>(
       }}
       renderInput={(params) => (
         <TextField
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus={autoFocus}
           {...params}
           {...textFieldProps}
           InputProps={{
@@ -171,7 +191,7 @@ export const Select = <T extends SelectOption = SelectOption>(
               <>
                 {loading && (
                   <InputAdornment position="end">
-                    <CircleProgress size="sm" />
+                    <CircleProgress noPadding size="xs" />
                   </InputAdornment>
                 )}
                 {textFieldProps?.InputProps?.endAdornment}
@@ -201,6 +221,9 @@ export const Select = <T extends SelectOption = SelectOption>(
         return (
           <ListItem
             {...rest}
+            {...(option.create || option.noOptions
+              ? undefined
+              : listItemProps?.(option as T)?.dataAttributes)}
             sx={
               option.noOptions
                 ? {

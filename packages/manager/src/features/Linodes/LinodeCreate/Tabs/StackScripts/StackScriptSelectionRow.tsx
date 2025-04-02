@@ -1,12 +1,12 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 import { Radio, Stack, Typography } from '@linode/ui';
+import { truncate } from '@linode/utilities';
 import React from 'react';
 
 import { InlineMenuAction } from 'src/components/InlineMenuAction/InlineMenuAction';
 import { TableCell } from 'src/components/TableCell';
 import { TableRow } from 'src/components/TableRow';
 import { isLKEStackScript } from 'src/features/StackScripts/stackScriptUtils';
-import { truncate } from 'src/utilities/truncate';
 
 import type { StackScript } from '@linode/api-v4';
 
@@ -44,7 +44,7 @@ export const StackScriptSelectionRow = (props: Props) => {
               {stackscript.username} /{' '}
               <Typography
                 component="span"
-                fontFamily={(theme) => theme.font.bold}
+                sx={(theme) => ({ font: theme.font.bold })}
               >
                 {stackscript.label}
               </Typography>
@@ -60,7 +60,7 @@ export const StackScriptSelectionRow = (props: Props) => {
           </Stack>
         </label>
       </TableCell>
-      <TableCell actionCell sx={{ minWidth: 120 }}>
+      <TableCell actionCell>
         <InlineMenuAction actionText="Show Details" onClick={onOpenDetails} />
       </TableCell>
     </TableRow>

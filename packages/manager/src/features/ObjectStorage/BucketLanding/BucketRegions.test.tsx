@@ -1,7 +1,7 @@
+import { regionFactory } from '@linode/utilities';
 import { screen } from '@testing-library/react';
 import React from 'react';
 
-import { regionFactory } from 'src/factories';
 import { renderWithTheme } from 'src/utilities/testHelpers';
 
 import { BucketRegions } from './BucketRegions';
@@ -26,7 +26,8 @@ const mockRegions = {
   // Mock data as needed
   error: null,
 };
-vi.mock('src/queries/regions/regions', () => ({
+vi.mock('@linode/queries', async (importOriginal) => ({
+  ...(await importOriginal()),
   useRegionsQuery: vi.fn(() => mockRegions),
 }));
 

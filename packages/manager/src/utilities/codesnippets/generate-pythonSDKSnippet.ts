@@ -1,4 +1,4 @@
-import { getIsLegacyInterfaceArray } from 'src/features/Linodes/LinodeCreate/utilities';
+import { getIsLegacyInterfaceArray } from '@linode/utilities';
 
 import type { CreateLinodeRequest } from '@linode/api-v4/lib/linodes';
 
@@ -127,6 +127,6 @@ export function generatePythonLinodeSnippet(
     snippet = snippet.slice(0, -2) + '\n';
   }
 
-  snippet += ')\n';
+  snippet += ')';
   return snippet;
 }

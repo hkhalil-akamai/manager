@@ -1,5 +1,11 @@
 import {
+  useCreatePersonalAccessTokenMutation,
+  useProfile,
+} from '@linode/queries';
+import {
+  ActionsPanel,
   Autocomplete,
+  Drawer,
   FormControl,
   FormHelperText,
   Notice,
@@ -10,8 +16,7 @@ import { useFormik } from 'formik';
 import { DateTime } from 'luxon';
 import * as React from 'react';
 
-import { ActionsPanel } from 'src/components/ActionsPanel/ActionsPanel';
-import { Drawer } from 'src/components/Drawer';
+import { NotFound } from 'src/components/NotFound';
 import { TableBody } from 'src/components/TableBody';
 import { TableCell } from 'src/components/TableCell';
 import { TableHead } from 'src/components/TableHead';
@@ -20,8 +25,6 @@ import { ISO_DATETIME_NO_TZ_FORMAT } from 'src/constants';
 import { AccessCell } from 'src/features/ObjectStorage/AccessKeyLanding/AccessCell';
 import { VPC_READ_ONLY_TOOLTIP } from 'src/features/VPCs/constants';
 import { useRestrictedGlobalGrantCheck } from 'src/hooks/useRestrictedGlobalGrantCheck';
-import { useProfile } from 'src/queries/profile/profile';
-import { useCreatePersonalAccessTokenMutation } from 'src/queries/profile/tokens';
 import { getErrorMap } from 'src/utilities/errorUtils';
 
 import {
@@ -204,7 +207,12 @@ export const CreateAPITokenDrawer = (props: Props) => {
     profile?.user_type !== 'parent' || isChildAccountAccessRestricted;
 
   return (
-    <Drawer onClose={onClose} open={open} title="Add Personal Access Token">
+    <Drawer
+      NotFoundComponent={NotFound}
+      onClose={onClose}
+      open={open}
+      title="Add Personal Access Token"
+    >
       {errorMap.none && <Notice text={errorMap.none} variant="error" />}
       <TextField
         errorText={errorMap.label}
@@ -263,13 +271,8 @@ export const CreateAPITokenDrawer = (props: Props) => {
         </TableHead>
         <TableBody>
           <TableRow data-qa-row="Select All">
-            <StyledSelectCell padding="checkbox" parentColumn="Access">
-              Select All
-            </StyledSelectCell>
-            <StyledSelectAllPermissionsCell
-              padding="checkbox"
-              parentColumn="No Access"
-            >
+            <StyledSelectCell padding="checkbox">Select All</StyledSelectCell>
+            <StyledSelectAllPermissionsCell padding="checkbox">
               <Radio
                 inputProps={{
                   'aria-label': 'Select no access for all',
@@ -282,10 +285,7 @@ export const CreateAPITokenDrawer = (props: Props) => {
                 value="0"
               />
             </StyledSelectAllPermissionsCell>
-            <StyledSelectAllPermissionsCell
-              padding="checkbox"
-              parentColumn="Read Only"
-            >
+            <StyledSelectAllPermissionsCell padding="checkbox">
               <Radio
                 inputProps={{
                   'aria-label': 'Select read-only for all',
@@ -298,10 +298,7 @@ export const CreateAPITokenDrawer = (props: Props) => {
                 value="1"
               />
             </StyledSelectAllPermissionsCell>
-            <StyledSelectAllPermissionsCell
-              padding="checkbox"
-              parentColumn="Read/Write"
-            >
+            <StyledSelectAllPermissionsCell padding="checkbox">
               <Radio
                 inputProps={{
                   'aria-label': 'Select read/write for all',
@@ -331,10 +328,10 @@ export const CreateAPITokenDrawer = (props: Props) => {
                 data-qa-row={basePermNameMap[scopeTup[0]]}
                 key={scopeTup[0]}
               >
-                <StyledAccessCell padding="checkbox" parentColumn="Access">
+                <StyledAccessCell padding="checkbox">
                   {basePermNameMap[scopeTup[0]]}
                 </StyledAccessCell>
-                <StyledPermissionsCell padding="checkbox" parentColumn="None">
+                <StyledPermissionsCell padding="checkbox">
                   <AccessCell
                     active={scopeTup[1] === 0}
                     disabled={false}
@@ -344,10 +341,7 @@ export const CreateAPITokenDrawer = (props: Props) => {
                     viewOnly={false}
                   />
                 </StyledPermissionsCell>
-                <StyledPermissionsCell
-                  padding="checkbox"
-                  parentColumn="Read Only"
-                >
+                <StyledPermissionsCell padding="checkbox">
                   <AccessCell
                     tooltipText={
                       scopeIsForVPC ? VPC_READ_ONLY_TOOLTIP : undefined
@@ -360,10 +354,7 @@ export const CreateAPITokenDrawer = (props: Props) => {
                     viewOnly={false}
                   />
                 </StyledPermissionsCell>
-                <StyledPermissionsCell
-                  padding="checkbox"
-                  parentColumn="Read/Write"
-                >
+                <StyledPermissionsCell padding="checkbox">
                   <AccessCell
                     active={scopeTup[1] === 2}
                     disabled={false}

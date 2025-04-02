@@ -1,3 +1,4 @@
+import { getQueryParamsFromQueryString } from '@linode/utilities';
 import { createMemoryHistory } from 'history';
 import { isEmpty } from 'ramda';
 import * as React from 'react';
@@ -5,7 +6,6 @@ import { act } from 'react-dom/test-utils';
 
 import { LOGIN_ROOT } from 'src/constants';
 import { OAuthCallbackPage } from 'src/layouts/OAuth';
-import { getQueryParamsFromQueryString } from 'src/utilities/queryParams';
 import { renderWithTheme } from 'src/utilities/testHelpers';
 
 import type { OAuthQueryParams } from './OAuth';
@@ -36,8 +36,20 @@ describe('layouts/OAuth', () => {
 
     const mockProps: CombinedProps = {
       dispatchStartSession: vi.fn(),
-      history,
-      location,
+      history: {
+        ...history,
+        location: {
+          ...location,
+          search:
+            '?code=test-code&returnTo=/&state=9f16ac6c-5518-4b96-b4a6-26a16f85b127',
+        },
+        push: vi.fn(),
+      },
+      location: {
+        ...location,
+        search:
+          '?code=test-code&returnTo=/&state=9f16ac6c-5518-4b96-b4a6-26a16f85b127',
+      },
       match,
     };
 

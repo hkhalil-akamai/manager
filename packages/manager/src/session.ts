@@ -1,5 +1,4 @@
 import Axios from 'axios';
-import { v4 } from 'uuid';
 
 import { APP_ROOT, CLIENT_ID, LOGIN_ROOT } from 'src/constants';
 import { generateCodeChallenge, generateCodeVerifier } from 'src/pkce';
@@ -68,7 +67,7 @@ export const prepareOAuthEndpoint = (
   redirectUri: string,
   scope: string = '*'
 ): string => {
-  const nonce = v4();
+  const nonce = window.crypto.randomUUID();
   authentication.nonce.set(nonce);
   return genOAuthEndpoint(redirectUri, scope, nonce);
 };

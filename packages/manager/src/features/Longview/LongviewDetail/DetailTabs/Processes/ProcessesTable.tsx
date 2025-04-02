@@ -1,6 +1,8 @@
+import { readableBytes } from '@linode/utilities';
 import * as React from 'react';
 
 import { MaskableText } from 'src/components/MaskableText/MaskableText';
+import { Table } from 'src/components/Table';
 import { TableBody } from 'src/components/TableBody';
 import { TableCell } from 'src/components/TableCell';
 import { TableHead } from 'src/components/TableHead';
@@ -12,9 +14,8 @@ import { TableSortCell } from 'src/components/TableSortCell';
 import { formatCPU } from 'src/features/Longview/shared/formatters';
 import { useOrderV2 } from 'src/hooks/useOrderV2';
 import { useWindowDimensions } from 'src/hooks/useWindowDimensions';
-import { readableBytes } from 'src/utilities/unitConversions';
 
-import { StyledDiv, StyledTable } from './ProcessesTable.styles';
+import { StyledDiv } from './ProcessesTable.styles';
 
 import type { Process } from './types';
 import type { APIError } from '@linode/api-v4/lib/types';
@@ -57,7 +58,7 @@ export const ProcessesTable = React.memo((props: ProcessesTableProps) => {
   });
 
   return (
-    <StyledTable
+    <Table
       // This prop is necessary to show the "ActiveCaret", and we only
       // want it on large viewports.
       noOverflow={width >= 1280}
@@ -130,7 +131,7 @@ export const ProcessesTable = React.memo((props: ProcessesTableProps) => {
           error
         )}
       </TableBody>
-    </StyledTable>
+    </Table>
   );
 });
 

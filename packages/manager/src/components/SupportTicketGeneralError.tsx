@@ -1,9 +1,9 @@
 import { Typography } from '@linode/ui';
+import { capitalize } from '@linode/utilities';
 import { useTheme } from '@mui/material/styles';
 import React from 'react';
 
 import { SupportLink } from 'src/components/SupportLink';
-import { capitalize } from 'src/utilities/capitalize';
 
 import { supportTextRegex } from './ErrorMessage';
 
@@ -32,7 +32,7 @@ export const SupportTicketGeneralError = (
   return (
     <Typography
       sx={{
-        fontFamily: theme.font.bold,
+        font: theme.font.bold,
         fontSize: '1rem',
         lineHeight: '20px',
       }}

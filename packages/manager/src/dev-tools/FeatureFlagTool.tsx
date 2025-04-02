@@ -20,6 +20,7 @@ const MOCK_FEATURE_FLAGS_STORAGE_KEY = 'devTools/mock-feature-flags';
  */
 const options: { flag: keyof Flags; label: string }[] = [
   { flag: 'aclp', label: 'CloudPulse' },
+  { flag: 'aclpAlerting', label: 'CloudPulse Alerting' },
   { flag: 'apl', label: 'Akamai App Platform' },
   { flag: 'blockStorageEncryption', label: 'Block Storage Encryption (BSE)' },
   { flag: 'disableLargestGbPlans', label: 'Disable Largest GB Plans' },
@@ -28,6 +29,7 @@ const options: { flag: keyof Flags; label: string }[] = [
   { flag: 'linodeDiskEncryption', label: 'Linode Disk Encryption (LDE)' },
   { flag: 'linodeInterfaces', label: 'Linode Interfaces' },
   { flag: 'lkeEnterprise', label: 'LKE-Enterprise' },
+  { flag: 'nodebalancerVpc', label: 'NodeBalancer-VPC Integration' },
   { flag: 'objMultiCluster', label: 'OBJ Multi-Cluster' },
   { flag: 'objectStorageGen2', label: 'OBJ Gen2' },
   { flag: 'selfServeBetas', label: 'Self Serve Betas' },
@@ -35,8 +37,13 @@ const options: { flag: keyof Flags; label: string }[] = [
   { flag: 'dbaasV2', label: 'Databases V2 Beta' },
   { flag: 'dbaasV2MonitorMetrics', label: 'Databases V2 Monitor' },
   { flag: 'databaseResize', label: 'Database Resize' },
+  { flag: 'databaseAdvancedConfig', label: 'Database Advanced Config' },
   { flag: 'apicliButtonCopy', label: 'APICLI Button Copy' },
   { flag: 'iam', label: 'Identity and Access Beta' },
+  {
+    flag: 'linodeCloneFirewall',
+    label: 'Linode Clone Firewall',
+  },
 ];
 
 interface RenderFlagItemProps {
@@ -203,7 +210,9 @@ export const FeatureFlagTool = withFeatureFlagProvider(() => {
       </div>
       <div className="dev-tools__tool__footer">
         <div className="dev-tools__button-list">
-          <button onClick={resetFlags}>Reset to LD DEV Defaults</button>
+          <button className="dev-tools-button" onClick={resetFlags}>
+            Reset to LD DEV Defaults
+          </button>
         </div>
       </div>
     </div>

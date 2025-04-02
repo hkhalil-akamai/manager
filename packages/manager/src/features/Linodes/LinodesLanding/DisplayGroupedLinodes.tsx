@@ -1,30 +1,34 @@
-import { Box, CircleProgress, Paper, Tooltip, Typography } from '@linode/ui';
-import Grid from '@mui/material/Unstable_Grid2';
-import { compose } from 'ramda';
+import { useIsGeckoEnabled } from '@linode/shared';
+import {
+  Box,
+  CircleProgress,
+  IconButton,
+  Paper,
+  Tooltip,
+  Typography,
+} from '@linode/ui';
+import { groupByTags, sortGroups } from '@linode/utilities';
+import Grid from '@mui/material/Grid2';
 import * as React from 'react';
 
 import GridView from 'src/assets/icons/grid-view.svg';
 import GroupByTag from 'src/assets/icons/group-by-tag.svg';
 import Paginate from 'src/components/Paginate';
-import {
-  MIN_PAGE_SIZE,
-  PaginationFooter,
-  getMinimumPageSizeForNumberOfItems,
-} from 'src/components/PaginationFooter/PaginationFooter';
-import { useIsGeckoEnabled } from 'src/components/RegionSelect/RegionSelect.utils';
+import { PaginationFooter } from 'src/components/PaginationFooter/PaginationFooter';
+import { MIN_PAGE_SIZE } from 'src/components/PaginationFooter/PaginationFooter.constants';
+import { getMinimumPageSizeForNumberOfItems } from 'src/components/PaginationFooter/PaginationFooter.utils';
 import { TableBody } from 'src/components/TableBody';
 import { TableCell } from 'src/components/TableCell';
 import { TableRow } from 'src/components/TableRow';
 import { TableRowEmpty } from 'src/components/TableRowEmpty/TableRowEmpty';
 import { TableRowLoading } from 'src/components/TableRowLoading/TableRowLoading';
+import { useFlags } from 'src/hooks/useFlags';
 import { useInfinitePageSize } from 'src/hooks/useInfinitePageSize';
-import { groupByTags, sortGroups } from 'src/utilities/groupByTags';
 
 import {
   StyledControlHeader,
   StyledTagHeader,
   StyledTagHeaderRow,
-  StyledToggleButton,
 } from './DisplayLinodes.styles';
 import { RegionTypeFilter } from './RegionTypeFilter';
 import TableWrapper from './TableWrapper';
@@ -80,7 +84,7 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
 
   const dataLength = data.length;
 
-  const orderedGroupedLinodes = compose(sortGroups, groupByTags)(data);
+  const orderedGroupedLinodes = sortGroups(groupByTags(data));
   const tableWrapperProps = {
     dataLength,
     handleOrderChange,
@@ -97,12 +101,17 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
     return acc;
   }, 0);
 
-  const { isGeckoLAEnabled } = useIsGeckoEnabled();
+  const flags = useFlags();
+
+  const { isGeckoLAEnabled } = useIsGeckoEnabled(
+    flags.gecko2?.enabled,
+    flags.gecko2?.la
+  );
 
   if (display === 'grid') {
     return (
       <>
-        <Grid className={'px0'} xs={12}>
+        <Grid className={'px0'} size={12}>
           {isGeckoLAEnabled && (
             <Paper sx={{ padding: 1 }}>
               <RegionTypeFilter handleRegionFilter={handleRegionFilter} />
@@ -114,16 +123,15 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
             </div>
             <Box>
               <Tooltip placement="top" title="List view">
-                <StyledToggleButton
+                <IconButton
                   aria-describedby={displayViewDescriptionId}
                   aria-label="Toggle display"
+                  className={linodesAreGrouped ? 'MuiIconButton-isActive' : ''}
                   disableRipple
-                  isActive={linodesAreGrouped}
                   onClick={toggleLinodeView}
-                  size="large"
                 >
                   <GridView />
-                </StyledToggleButton>
+                </IconButton>
               </Tooltip>
 
               <div className="visually-hidden" id={groupByDescriptionId}>
@@ -132,16 +140,21 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
                   : 'group by tag is currently disabled'}
               </div>
               <Tooltip placement="top-end" title="Ungroup by tag">
-                <StyledToggleButton
+                <IconButton
+                  sx={(theme) => ({
+                    ':hover': {
+                      color: theme.tokens.color.Brand[60],
+                    },
+                    color: theme.tokens.component.Table.HeaderNested.Icon,
+                  })}
                   aria-describedby={groupByDescriptionId}
                   aria-label="Toggle group by tag"
+                  className={linodesAreGrouped ? 'MuiIconButton-isActive' : ''}
                   disableRipple
-                  isActive={linodesAreGrouped}
                   onClick={toggleGroupLinodes}
-                  size="large"
                 >
                   <GroupByTag />
-                </StyledToggleButton>
+                </IconButton>
               </Tooltip>
             </Box>
           </StyledControlHeader>
@@ -157,7 +170,7 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
           return (
             <Box data-qa-tag-header={tag} key={tag} sx={{ marginBottom: 2 }}>
               <Grid container>
-                <Grid xs={12}>
+                <Grid size={12}>
                   <StyledTagHeader variant="h2">{tag}</StyledTagHeader>
                 </Grid>
               </Grid>
@@ -197,8 +210,11 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
                   return (
                     <React.Fragment>
                       <Component {...finalProps} />
-                      <Grid xs={12}>
+                      <Grid size={12}>
                         <PaginationFooter
+                          sx={{
+                            border: 0,
+                          }}
                           count={count}
                           eventCategory={'linodes landing'}
                           handlePageChange={handlePageChange}
@@ -283,6 +299,10 @@ export const DisplayGroupedLinodes = (props: DisplayGroupedLinodesProps) => {
                           <TableRow>
                             <TableCell colSpan={7} sx={{ padding: 0 }}>
                               <PaginationFooter
+                                sx={{
+                                  borderLeft: 0,
+                                  borderRight: 0,
+                                }}
                                 count={count}
                                 eventCategory={'linodes landing'}
                                 handlePageChange={handlePageChange}

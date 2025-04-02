@@ -54,7 +54,7 @@ export const DisplayAlertDetailChips = React.memo(
           <React.Fragment key={`${label}_${index}`}>
             <Grid item md={labelGridColumns} xs={12}>
               {index === 0 && (
-                <StyledAlertTypography fontFamily={theme.font.bold}>
+                <StyledAlertTypography sx={{ font: theme.font.bold }}>
                   {label}:
                 </StyledAlertTypography>
               )}
@@ -62,14 +62,18 @@ export const DisplayAlertDetailChips = React.memo(
             <Grid item md={valueGridColumns} xs={12}>
               <Grid
                 container
-                flexWrap={mergeChips ? 'nowrap' : 'wrap'}
-                gap={mergeChips ? 0 : 1}
+                sx={{
+                  flexWrap: mergeChips ? 'nowrap' : 'wrap',
+                  gap: mergeChips ? 0 : 1,
+                }}
               >
                 {value.map((label, index) => (
                   <Grid
                     item
                     key={index}
-                    marginLeft={mergeChips && index > 0 ? -1 : 0}
+                    sx={{
+                      marginLeft: mergeChips && index > 0 ? -1 : 0,
+                    }}
                   >
                     <StyledAlertChip
                       borderRadius={getAlertChipBorderRadius({

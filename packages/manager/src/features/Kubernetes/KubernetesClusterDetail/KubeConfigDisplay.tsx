@@ -1,4 +1,11 @@
-import { Box, CircleProgress, Stack, Typography } from '@linode/ui';
+import {
+  Box,
+  CircleProgress,
+  Stack,
+  StyledLinkButton,
+  Typography,
+} from '@linode/ui';
+import { downloadFile } from '@linode/utilities';
 import copy from 'copy-to-clipboard';
 import { useSnackbar } from 'notistack';
 import * as React from 'react';
@@ -13,7 +20,6 @@ import {
   useAllKubernetesClusterAPIEndpointsQuery,
   useKubernetesKubeConfigQuery,
 } from 'src/queries/kubernetes';
-import { downloadFile } from 'src/utilities/downloadFile';
 import { getAPIErrorOrDefault } from 'src/utilities/errorUtils';
 
 import type { APIError } from '@linode/api-v4';
@@ -43,6 +49,10 @@ const useStyles = makeStyles()((theme: Theme) => ({
     },
     '&:hover': {
       opacity: 0.7,
+      textDecoration: 'none',
+    },
+    '&:hover:not(:disabled)': {
+      textDecoration: 'none',
     },
     alignItems: 'center',
     borderLeft: `1px solid ${theme.tokens.color.Neutrals[40]}`,
@@ -69,7 +79,7 @@ const useStyles = makeStyles()((theme: Theme) => ({
     width: 14,
   },
   label: {
-    fontFamily: theme.font.bold,
+    font: theme.font.bold,
     marginBottom: `calc(${theme.spacing(1)} - 3px)`,
   },
 }));
@@ -146,16 +156,36 @@ export const KubeConfigDisplay = (props: Props) => {
 
   const downloadKubeConfig = async () => {
     try {
-      const { data } = await getKubeConfig();
+      const queryResult = await getKubeConfig();
 
-      if (data) {
-        downloadFile(`${clusterLabel}-kubeconfig.yaml`, data);
+      if (
+        Array.isArray(queryResult.error) &&
+        queryResult.error[0]?.reason?.includes(
+          'kubeconfig is not yet available'
+        )
+      ) {
+        enqueueSnackbar(
+          'Your cluster is still provisioning. Please try again in a few minutes.',
+          { variant: 'error' }
+        );
+        return;
       }
+
+      if (queryResult.isError) {
+        throw queryResult.error;
+      }
+
+      if (!queryResult.data) {
+        throw new Error('No kubeconfig data available');
+      }
+
+      downloadFile(`${clusterLabel}-kubeconfig.yaml`, queryResult.data);
     } catch (error) {
-      const errorText = getAPIErrorOrDefault(
-        error,
-        'Unable to download your kubeconfig'
-      )[0].reason;
+      const errorText =
+        error instanceof Error
+          ? error.message
+          : getAPIErrorOrDefault(error, 'Unable to download your kubeconfig')[0]
+              .reason;
 
       enqueueSnackbar(errorText, { variant: 'error' });
     }
@@ -189,9 +219,10 @@ export const KubeConfigDisplay = (props: Props) => {
           Kubeconfig:
         </Typography>
         <div className={classes.kubeconfigElements}>
-          <Box
+          <StyledLinkButton
             className={classes.kubeconfigElement}
             onClick={downloadKubeConfig}
+            aria-label={`Download kubeconfig for ${clusterLabel}`}
           >
             <DownloadIcon
               className={classes.kubeconfigIcons}
@@ -200,12 +231,20 @@ export const KubeConfigDisplay = (props: Props) => {
             <Typography className={classes.kubeconfigFileText}>
               {`${clusterLabel}-kubeconfig.yaml`}
             </Typography>
-          </Box>
-          <Box className={classes.kubeconfigElement} onClick={handleOpenDrawer}>
+          </StyledLinkButton>
+          <StyledLinkButton
+            className={classes.kubeconfigElement}
+            onClick={handleOpenDrawer}
+            aria-label="View kubeconfig details"
+          >
             <DetailsIcon className={classes.kubeconfigIcons} />
             <Typography className={classes.kubeconfigFileText}>View</Typography>
-          </Box>
-          <Box className={classes.kubeconfigElement} onClick={onCopyToken}>
+          </StyledLinkButton>
+          <StyledLinkButton
+            className={classes.kubeconfigElement}
+            onClick={onCopyToken}
+            aria-label="Copy kubeconfig token"
+          >
             {isCopyTokenLoading ? (
               <CircleProgress
                 className={classes.kubeconfigIcons}
@@ -216,10 +255,11 @@ export const KubeConfigDisplay = (props: Props) => {
               <CopyIcon className={classes.kubeconfigIcons} />
             )}
             <Box className={classes.kubeconfigFileText}>Copy Token</Box>
-          </Box>
-          <Box
+          </StyledLinkButton>
+          <StyledLinkButton
             className={classes.kubeconfigElement}
             onClick={() => setResetKubeConfigDialogOpen(true)}
+            aria-label="Reset kubeconfig"
           >
             <ResetIcon
               className={cx({
@@ -235,7 +275,7 @@ export const KubeConfigDisplay = (props: Props) => {
             >
               Reset
             </Typography>
-          </Box>
+          </StyledLinkButton>
         </div>
       </Box>
     </Stack>

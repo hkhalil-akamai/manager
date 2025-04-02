@@ -1,4 +1,4 @@
-import { getIsLegacyInterfaceArray } from 'src/features/Linodes/LinodeCreate/utilities';
+import { getIsLegacyInterfaceArray } from '@linode/utilities';
 
 import { escapeStringForCLI } from '../escapeStringForCLI';
 
@@ -108,7 +108,7 @@ export function generateTerraformConfig(config: CreateLinodeRequest): string {
     terraformConfig += `  backups_enabled = ${config.backups_enabled}\n`;
   }
 
-  terraformConfig += `}\n`;
+  terraformConfig += `}`;
 
   return terraformConfig;
 }

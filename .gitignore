@@ -128,6 +128,7 @@ packages/manager/test-report.xml
 **/manager/cypress/downloads/
 **/manager/cypress/results/
 **/manager/cypress/screenshots/
+**/manager/cypress/reports/
 
 packages/manager/cypress/fixtures/example.json
 
@@ -141,3 +142,6 @@ docs/.vitepress/cache
 
 # module federation
 **/.__mf__temp/
+
+# pnpm store will be generated if you run pnpm install in docker environments
+.pnpm-store

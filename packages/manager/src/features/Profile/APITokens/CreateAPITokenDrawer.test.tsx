@@ -16,8 +16,8 @@ const queryMocks = vi.hoisted(() => ({
   useProfile: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock('src/queries/profile/profile', async () => {
-  const actual = await vi.importActual<any>('src/queries/profile/profile');
+vi.mock('@linode/queries', async () => {
+  const actual = await vi.importActual<any>('@linode/queries');
   return {
     ...actual,
     useProfile: queryMocks.useProfile,
@@ -79,7 +79,7 @@ describe('Create API Token Drawer', () => {
       );
       const submitBtn = getByText('Create Token');
 
-      expect(submitBtn).not.toHaveAttribute('aria-disabled', 'true');
+      expect(submitBtn).toHaveAttribute('aria-disabled', 'true');
       await userEvent.click(selectAllNoAccessPermRadioButton);
       await userEvent.click(submitBtn);
 

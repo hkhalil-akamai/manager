@@ -1,4 +1,4 @@
-import { getIsLegacyInterfaceArray } from 'src/features/Linodes/LinodeCreate/utilities';
+import { getIsLegacyInterfaceArray } from '@linode/utilities';
 
 import type { CreateLinodeRequest } from '@linode/api-v4';
 
@@ -115,5 +115,5 @@ export function generateAnsibleConfig(config: CreateLinodeRequest): string {
     });
   }
 
-  return configStr;
+  return configStr.trim();
 }

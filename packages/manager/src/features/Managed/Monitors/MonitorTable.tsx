@@ -1,5 +1,6 @@
 import { Button } from '@linode/ui';
-import Grid from '@mui/material/Unstable_Grid2';
+import { useDialog } from '@linode/utilities';
+import Grid from '@mui/material/Grid2';
 import { useSnackbar } from 'notistack';
 import * as React from 'react';
 
@@ -12,8 +13,8 @@ import { Table } from 'src/components/Table';
 import { TableBody } from 'src/components/TableBody';
 import { TableCell } from 'src/components/TableCell';
 import { TableHead } from 'src/components/TableHead';
+import { TableRow } from 'src/components/TableRow';
 import { TableSortCell } from 'src/components/TableSortCell';
-import { useDialog } from 'src/hooks/useDialog';
 import {
   useAllManagedContactsQuery,
   useAllManagedCredentialsQuery,
@@ -31,7 +32,7 @@ import {
 
 import MonitorDrawer from '../MonitorDrawer';
 import { HistoryDrawer } from './HistoryDrawer';
-import { StyledGrid, StyledTableRow } from './MonitorTable.styles';
+import { StyledGrid } from './MonitorTable.styles';
 import MonitorTableContent from './MonitorTableContent';
 
 import type { ManagedServicePayload } from '@linode/api-v4/lib/managed';
@@ -173,9 +174,20 @@ export const MonitorTable = () => {
   return (
     <>
       <DocumentTitleSegment segment="Monitors" />
-      <Grid alignItems="flex-end" container justifyContent="flex-end">
+      <Grid
+        container
+        sx={{
+          alignItems: 'flex-end',
+          justifyContent: 'flex-end',
+        }}
+      >
         <Grid>
-          <Grid alignItems="flex-end" container>
+          <Grid
+            container
+            sx={{
+              alignItems: 'flex-end',
+            }}
+          >
             <StyledGrid>
               <Button
                 buttonType="primary"
@@ -201,7 +213,7 @@ export const MonitorTable = () => {
               <>
                 <Table aria-label="List of Your Managed Service Monitors">
                   <TableHead>
-                    <StyledTableRow>
+                    <TableRow>
                       <TableSortCell
                         active={orderBy === 'label'}
                         data-qa-monitor-label-header
@@ -230,7 +242,7 @@ export const MonitorTable = () => {
                         Resource
                       </TableSortCell>
                       <TableCell />
-                    </StyledTableRow>
+                    </TableRow>
                   </TableHead>
                   <TableBody>
                     <MonitorTableContent

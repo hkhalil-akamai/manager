@@ -6,12 +6,12 @@ import {
   Tooltip,
   Typography,
 } from '@linode/ui';
+import { pluralize } from '@linode/utilities';
 import Divider from '@mui/material/Divider';
 import * as React from 'react';
 
 import { ActionMenu } from 'src/components/ActionMenu/ActionMenu';
 import { Hidden } from 'src/components/Hidden';
-import { pluralize } from 'src/utilities/pluralize';
 
 import { NodeTable } from './NodeTable';
 
@@ -24,12 +24,14 @@ import type {
 import type { EncryptionStatus } from '@linode/api-v4/lib/linodes/types';
 
 interface Props {
+  accordionExpanded: boolean;
   autoscaler: AutoscaleSettings;
   clusterCreated: string;
   clusterId: number;
   clusterTier: KubernetesTier;
   count: number;
   encryptionStatus: EncryptionStatus | undefined;
+  handleAccordionClick: () => void;
   handleClickLabelsAndTaints: (poolId: number) => void;
   handleClickResize: (poolId: number) => void;
   isOnlyNodePool: boolean;
@@ -39,6 +41,7 @@ interface Props {
   openRecycleAllNodesDialog: (poolId: number) => void;
   openRecycleNodeDialog: (nodeID: string, linodeLabel: string) => void;
   poolId: number;
+  regionSupportsDiskEncryption: boolean;
   statusFilter: StatusFilter;
   tags: string[];
   typeLabel: string;
@@ -46,12 +49,14 @@ interface Props {
 
 export const NodePool = (props: Props) => {
   const {
+    accordionExpanded,
     autoscaler,
     clusterCreated,
     clusterId,
     clusterTier,
     count,
     encryptionStatus,
+    handleAccordionClick,
     handleClickLabelsAndTaints,
     handleClickResize,
     isOnlyNodePool,
@@ -61,6 +66,7 @@ export const NodePool = (props: Props) => {
     openRecycleAllNodesDialog,
     openRecycleNodeDialog,
     poolId,
+    regionSupportsDiskEncryption,
     statusFilter,
     tags,
     typeLabel,
@@ -210,7 +216,11 @@ export const NodePool = (props: Props) => {
       }
       data-qa-node-pool-id={poolId}
       data-qa-node-pool-section
-      defaultExpanded={true}
+      detailProps={{ sx: { paddingBottom: 1 } }}
+      expanded={accordionExpanded}
+      onChange={handleAccordionClick}
+      // Improve performance by unmounting large content from the DOM when collapsed
+      slotProps={{ transition: { unmountOnExit: nodes.length > 25 } }}
     >
       <NodeTable
         clusterCreated={clusterCreated}
@@ -220,6 +230,7 @@ export const NodePool = (props: Props) => {
         nodes={nodes}
         openRecycleNodeDialog={openRecycleNodeDialog}
         poolId={poolId}
+        regionSupportsDiskEncryption={regionSupportsDiskEncryption}
         statusFilter={statusFilter}
         tags={tags}
         typeLabel={typeLabel}

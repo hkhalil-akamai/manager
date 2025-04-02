@@ -1,10 +1,10 @@
-import { Box, Button, CircleProgress } from '@linode/ui';
-import { styled, useTheme } from '@mui/material/styles';
+import { useSubnetsQuery } from '@linode/queries';
+import { Box, Button, CircleProgress, ErrorState } from '@linode/ui';
+import { useTheme } from '@mui/material/styles';
 import * as React from 'react';
 
 import { CollapsibleTable } from 'src/components/CollapsibleTable/CollapsibleTable';
 import { DebouncedSearchTextField } from 'src/components/DebouncedSearchTextField';
-import { ErrorState } from 'src/components/ErrorState/ErrorState';
 import { Hidden } from 'src/components/Hidden';
 import { PaginationFooter } from 'src/components/PaginationFooter/PaginationFooter';
 import { Table } from 'src/components/Table';
@@ -18,7 +18,6 @@ import { PowerActionsDialog } from 'src/features/Linodes/PowerActionsDialogOrDra
 import { SubnetActionMenu } from 'src/features/VPCs/VPCDetail/SubnetActionMenu';
 import { useOrder } from 'src/hooks/useOrder';
 import { usePagination } from 'src/hooks/usePagination';
-import { useSubnetsQuery } from 'src/queries/vpcs/vpcs';
 
 import { SubnetAssignLinodesDrawer } from './SubnetAssignLinodesDrawer';
 import { SubnetCreateDrawer } from './SubnetCreateDrawer';
@@ -33,6 +32,7 @@ import type { TableItem } from 'src/components/CollapsibleTable/CollapsibleTable
 import type { Action } from 'src/features/Linodes/PowerActionsDialogOrDrawer';
 
 interface Props {
+  isVPCLKEEnterpriseCluster: boolean;
   vpcId: number;
   vpcRegion: string;
 }
@@ -40,7 +40,7 @@ interface Props {
 const preferenceKey = 'vpc-subnets';
 
 export const VPCSubnetsTable = (props: Props) => {
-  const { vpcId, vpcRegion } = props;
+  const { isVPCLKEEnterpriseCluster, vpcId, vpcRegion } = props;
   const theme = useTheme();
   const [subnetsFilterText, setSubnetsFilterText] = React.useState('');
   const [selectedSubnet, setSelectedSubnet] = React.useState<
@@ -175,7 +175,7 @@ export const VPCSubnetsTable = (props: Props) => {
 
   const SubnetTableRowHead = (
     <TableRow>
-      <StyledTableSortCell
+      <TableSortCell
         sx={(theme) => ({
           [theme.breakpoints.down('sm')]: {
             width: '50%',
@@ -188,9 +188,9 @@ export const VPCSubnetsTable = (props: Props) => {
         label="label"
       >
         Subnet Label
-      </StyledTableSortCell>
+      </TableSortCell>
       <Hidden smDown>
-        <StyledTableSortCell
+        <TableSortCell
           active={orderBy === 'id'}
           direction={order}
           handleClick={handleOrderChange}
@@ -198,13 +198,13 @@ export const VPCSubnetsTable = (props: Props) => {
           sx={{ width: '10%' }}
         >
           Subnet ID
-        </StyledTableSortCell>
+        </TableSortCell>
       </Hidden>
-      <StyledTableCell sx={{ width: '18%' }}>Subnet IP Range</StyledTableCell>
+      <TableCell sx={{ width: '18%' }}>Subnet IP Range</TableCell>
       <Hidden smDown>
-        <StyledTableCell sx={{ width: '10%' }}>Linodes</StyledTableCell>
+        <TableCell sx={{ width: '10%' }}>Linodes</TableCell>
       </Hidden>
-      <StyledTableCell></StyledTableCell>
+      <TableCell />
     </TableRow>
   );
 
@@ -219,12 +219,13 @@ export const VPCSubnetsTable = (props: Props) => {
           <Hidden smDown>
             <TableCell>{subnet.linodes.length}</TableCell>
           </Hidden>
-          <TableCell align="right">
+          <TableCell actionCell>
             <SubnetActionMenu
               handleAssignLinodes={handleSubnetAssignLinodes}
               handleDelete={handleSubnetDelete}
               handleEdit={handleEditSubnet}
               handleUnassignLinodes={handleSubnetUnassignLinodes}
+              isVPCLKEEnterpriseCluster={isVPCLKEEnterpriseCluster}
               numLinodes={subnet.linodes.length}
               subnet={subnet}
               vpcId={vpcId}
@@ -234,8 +235,13 @@ export const VPCSubnetsTable = (props: Props) => {
       );
 
       const InnerTable = (
-        <Table aria-label="Linode" size="small">
-          <TableHead style={{ fontSize: '.875rem' }}>
+        <Table aria-label="Linode" size="small" striped={false}>
+          <TableHead
+            style={{
+              color: theme.tokens.color.Neutrals.White,
+              fontSize: '.875rem',
+            }}
+          >
             {SubnetLinodeTableRowHead}
           </TableHead>
           <TableBody>
@@ -244,6 +250,7 @@ export const VPCSubnetsTable = (props: Props) => {
                 <SubnetLinodeRow
                   handlePowerActionsLinode={handlePowerActionsLinode}
                   handleUnassignLinode={handleSubnetUnassignLinode}
+                  isVPCLKEEnterpriseCluster={isVPCLKEEnterpriseCluster}
                   key={linodeInfo.id}
                   linodeId={linodeInfo.id}
                   subnet={subnet}
@@ -261,7 +268,9 @@ export const VPCSubnetsTable = (props: Props) => {
         InnerTable,
         OuterTableCells,
         id: subnet.id,
-        label: subnet.label,
+        label: `${subnet.label}${
+          isVPCLKEEnterpriseCluster ? ' (Managed)' : ''
+        }`,
       };
     });
   };
@@ -290,6 +299,7 @@ export const VPCSubnetsTable = (props: Props) => {
             marginBottom: theme.spacing(2),
           }}
           buttonType="primary"
+          disabled={isVPCLKEEnterpriseCluster}
           onClick={() => setSubnetCreateDrawerOpen(true)}
         >
           Create Subnet
@@ -353,17 +363,3 @@ export const VPCSubnetsTable = (props: Props) => {
     </>
   );
 };
-
-const StyledTableCell = styled(TableCell, {
-  label: 'StyledTableCell',
-})(({ theme }) => ({
-  borderBottom: `1px solid ${theme.borderColors.borderTable} !important`,
-  whiteSpace: 'nowrap',
-}));
-
-const StyledTableSortCell = styled(TableSortCell, {
-  label: 'StyledTableSortCell',
-})(({ theme }) => ({
-  borderBottom: `1px solid ${theme.borderColors.borderTable} !important`,
-  whiteSpace: 'nowrap',
-}));

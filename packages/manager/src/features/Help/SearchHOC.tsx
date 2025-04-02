@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+import { truncate } from '@linode/utilities';
 import Algolia from 'algoliasearch';
 import * as React from 'react';
 
@@ -8,7 +9,6 @@ import {
   COMMUNITY_BASE_URL,
   DOCS_BASE_URL,
 } from 'src/constants';
-import { truncate } from 'src/utilities/truncate';
 
 import type { SearchClient } from 'algoliasearch';
 
@@ -48,32 +48,42 @@ export const convertDocsToItems = (
   highlight: boolean,
   hits: SearchHit[] = []
 ): ConvertedItems[] => {
-  return hits.map((hit: SearchHit, idx: number) => {
-    return {
-      data: {
-        href: DOCS_BASE_URL + hit.href,
-        source: 'Linode documentation',
-      },
-      label: getDocsResultLabel(hit, highlight),
-      value: idx,
-    };
+  const uniqueHits = new Map<string, ConvertedItems>();
+  hits.forEach((hit: SearchHit, idx: number) => {
+    const href = DOCS_BASE_URL + hit.href;
+    if (!uniqueHits.has(href)) {
+      uniqueHits.set(href, {
+        data: {
+          href,
+          source: 'Linode documentation',
+        },
+        label: getDocsResultLabel(hit, highlight),
+        value: idx,
+      });
+    }
   });
+  return Array.from(uniqueHits.values());
 };
 
 export const convertCommunityToItems = (
   highlight: boolean,
   hits: SearchHit[] = []
 ): ConvertedItems[] => {
-  return hits.map((hit: SearchHit, idx: number) => {
-    return {
-      data: {
-        href: getCommunityUrl(hit.objectID),
-        source: 'Linode Community Site',
-      },
-      label: getCommunityResultLabel(hit, highlight),
-      value: idx,
-    };
+  const uniqueItems = new Map<string, ConvertedItems>();
+  hits.forEach((hit: SearchHit, idx: number) => {
+    const href = getCommunityUrl(hit.objectID);
+    if (!uniqueItems.has(href)) {
+      uniqueItems.set(href, {
+        data: {
+          href,
+          source: 'Linode Community Site',
+        },
+        label: getCommunityResultLabel(hit, highlight),
+        value: idx,
+      });
+    }
   });
+  return Array.from(uniqueItems.values());
 };
 
 export const getCommunityUrl = (id: string) => {

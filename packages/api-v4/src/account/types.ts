@@ -99,7 +99,7 @@ export const linodeInterfaceAccountSettings = [
   'legacy_config_default_but_linode_allowed',
   'linode_default_but_legacy_config_allowed',
   'linode_only',
-];
+] as const;
 
 export type LinodeInterfaceAccountSetting = typeof linodeInterfaceAccountSettings[number];
 
@@ -203,12 +203,14 @@ export type GlobalGrantTypes =
   | 'add_linodes'
   | 'add_longview'
   | 'add_databases'
+  | 'add_kubernetes'
   | 'add_nodebalancers'
   | 'add_stackscripts'
   | 'add_volumes'
   | 'add_vpcs'
   | 'cancel_account'
   | 'child_account_access'
+  | 'add_buckets'
   | 'longview_subscription';
 
 export interface GlobalGrants {
